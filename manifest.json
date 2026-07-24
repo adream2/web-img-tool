@@ -1,0 +1,74 @@
+{
+  "manifest_version": 3,
+  "name": "Web Image Tool Pro",
+  "version": "1.0.0",
+  "description": "一站式图片提取、处理与 GitHub 图床管理工具",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "downloads",
+    "contextMenus",
+    "scripting",
+    "tabs",
+    "webRequest",
+    "webNavigation"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "Web Image Tool Pro"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Shift+I",
+        "windows": "Alt+Shift+I",
+        "mac": "Alt+Shift+I"
+      },
+      "description": "打开图片工具面板"
+    },
+    "batch-download": {
+      "suggested_key": {
+        "default": "Alt+Shift+D",
+        "windows": "Alt+Shift+D"
+      },
+      "description": "批量下载当前页面图片"
+    },
+    "copy-base64": {
+      "suggested_key": {
+        "default": "Alt+Shift+B",
+        "windows": "Alt+Shift+B"
+      },
+      "description": "复制选中图片的Base64编码"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["lib/*", "styles/*", "panel.html", "panel.css", "popup.css", "popup.js", "picx.html", "picx.js", "picx.css", "picx-panel.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

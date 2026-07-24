@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Image Tool Pro</title>
+  <link rel="stylesheet" href="popup.css">
+  <link rel="stylesheet" href="panel.css">
+  <link rel="stylesheet" href="picx.css">
+</head>
+<body>
+  <div class="panel-container">
+    <header class="panel-header">
+      <h1>Web Image Tool Pro</h1>
+      <div class="version">v1.0.0</div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="detect">图片检测</button>
+      <button class="tab-btn" data-tab="process">图片处理</button>
+      <button class="tab-btn" data-tab="batch">批量操作</button>
+      <button class="tab-btn" data-tab="picx">图床</button>
+      <button class="tab-btn" data-tab="settings">设置</button>
+    </nav>
+
+    <!-- 图片检测标签页 -->
+    <div id="detect-tab" class="tab-content active">
+      <div class="section">
+        <div class="section-header">
+          <h2>页面图片检测</h2>
+          <div class="scan-controls">
+            <button id="scan-btn" class="btn btn-primary">扫描页面</button>
+            <button id="rescan-btn" class="btn btn-secondary" style="display:none;">重新扫描</button>
+            <button id="deep-scan-btn" class="btn btn-secondary">深度扫描</button>
+          </div>
+        </div>
+        <div class="scan-hint" style="font-size:12px;color:#888;margin-top:6px;">
+          扫描会收集页面加载过程中所有已捕获的图片请求
+        </div>
+
+        <div class="stats">
+          <div class="stat-item">
+            <span class="stat-label">检测到图片：</span>
+            <span id="image-count" class="stat-value">0</span>
+          </div>
+          <div class="stat-item">
+            <label class="checkbox-label">
+              <input type="checkbox" id="include-favicons" checked>
+              <span>包含图标/Logo</span>
+            </label>
+          </div>
+          <div class="stat-item">
+            <label class="checkbox-label">
+              <input type="checkbox" id="include-backgrounds" checked>
+              <span>包含背景图</span>
+            </label>
+          </div>
+        </div>
+
+        <div id="image-list" class="image-list panel-image-list">
+          <div class="empty-state">点击"扫描页面"检测当前页面的图片</div>
+        </div>
+
+        <div class="actions">
+          <button id="select-all-btn" class="btn btn-secondary">全选</button>
+          <button id="batch-download-btn" class="btn btn-primary">批量下载</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 图片处理标签页 -->
+    <div id="process-tab" class="tab-content">
+      <div class="section">
+        <h2>图片处理工具</h2>
+
+        <div class="upload-area" id="upload-area">
+          <input type="file" id="file-input" accept="image/*" multiple style="display:none">
+          <div class="upload-content">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+            </svg>
+            <p>点击或拖拽图片到此处</p>
+            <p class="hint">支持 JPG、PNG、WebP 等格式</p>
+          </div>
+        </div>
+
+        <div id="preview-area" class="preview-area" style="display:none">
+          <div class="preview-header">
+            <h3>图片预览</h3>
+            <button id="clear-preview" class="btn-icon"></button>
+          </div>
+          <div class="preview-content">
+            <img id="preview-image" src="" alt="Preview">
+          </div>
+          <div class="preview-info">
+            <span id="image-dimensions"></span>
+            <span id="image-size"></span>
+          </div>
+        </div>
+
+        <div class="tools-grid">
+          <div class="tool-card" data-tool="resize">
+            <div class="tool-icon">📐</div>
+            <h3>调整尺寸</h3>
+            <p>一键应用标准尺寸</p>
+          </div>
+          <div class="tool-card" data-tool="crop">
+            <div class="tool-icon">✂️</div>
+            <h3>裁剪图片</h3>
+            <p>矩形/圆形裁剪</p>
+          </div>
+          <div class="tool-card" data-tool="compress">
+            <div class="tool-icon">🗜️</div>
+            <h3>压缩图片</h3>
+            <p>调整质量和大小</p>
+          </div>
+          <div class="tool-card" data-tool="convert">
+            <div class="tool-icon"></div>
+            <h3>格式转换</h3>
+            <p>JPG/PNG/WebP</p>
+          </div>
+          <div class="tool-card" data-tool="upscale">
+            <div class="tool-icon"></div>
+            <h3>图片放大</h3>
+            <p>算法放大</p>
+          </div>
+          <div class="tool-card" data-tool="base64">
+            <div class="tool-icon"></div>
+            <h3>转Base64</h3>
+            <p>转换为编码格式</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 批量操作标签页 -->
+    <div id="batch-tab" class="tab-content">
+      <div class="section">
+        <h2>批量操作</h2>
+
+        <div class="batch-options">
+          <div class="option-group">
+            <label>输出格式</label>
+            <select id="batch-format">
+              <option value="original">保持原格式</option>
+              <option value="jpeg">JPEG</option>
+              <option value="png">PNG</option>
+              <option value="webp">WebP</option>
+            </select>
+          </div>
+          <div class="option-group">
+            <label>压缩质量</label>
+            <div class="slider-container">
+              <input type="range" id="batch-quality" min="10" max="100" value="92">
+              <span id="quality-value">92%</span>
+            </div>
+          </div>
+          <div class="option-group">
+            <label>调整尺寸</label>
+            <select id="batch-resize">
+              <option value="none">不调整</option>
+              <option value="1920x1080">1920×1080 (Full HD)</option>
+              <option value="1280x720">1280×720 (HD)</option>
+              <option value="800x600">800×600</option>
+              <option value="wechat">微信封面 (900×383)</option>
+              <option value="douyin">抖音封面 (1080×1920)</option>
+              <option value="weibo">微博封面 (900×500)</option>
+              <option value="xiaohongshu">小红书封面 (1080×1440)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="batch-actions">
+          <button id="batch-convert-btn" class="btn btn-primary btn-large">
+            批量转换并下载
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 图床标签页 -->
+    <div id="picx-tab" class="tab-content">
+      <!-- PicX 图床内容将通过 JS 动态加载 -->
+      <div id="picx-container"></div>
+    </div>
+
+    <!-- 设置标签页 -->
+    <div id="settings-tab" class="tab-content">
+      <div class="section">
+        <h2>设置</h2>
+
+        <div class="setting-group">
+          <label>默认保存格式</label>
+          <select id="default-format">
+            <option value="original">保持原格式</option>
+            <option value="jpeg">JPEG</option>
+            <option value="png">PNG</option>
+            <option value="webp">WebP</option>
+          </select>
+        </div>
+
+        <div class="setting-group">
+          <label>默认压缩质量</label>
+          <div class="slider-container">
+            <input type="range" id="default-quality" min="10" max="100" value="92">
+            <span id="default-quality-value">92%</span>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <label>
+            <input type="checkbox" id="auto-detect" checked>
+            自动检测页面图片
+          </label>
+        </div>
+
+        <div class="setting-group">
+          <label>
+            <input type="checkbox" id="show-notifications" checked>
+            显示操作通知
+          </label>
+        </div>
+
+        <div class="shortcuts-info">
+          <h3>快捷键</h3>
+          <div class="shortcut-item">
+            <kbd>Alt+Shift+I</kbd>
+            <span>打开插件面板</span>
+          </div>
+          <div class="shortcut-item">
+            <kbd>Alt+Shift+D</kbd>
+            <span>批量下载图片</span>
+          </div>
+          <div class="shortcut-item">
+            <kbd>Alt+Shift+B</kbd>
+            <span>复制悬停图片Base64</span>
+          </div>
+        </div>
+
+        <div class="shortcuts-info">
+          <h3>AI 放大配置</h3>
+          <p style="font-size:11px;color:#999;margin-bottom:10px;">配置第三方 AI 超分辨率 API，启用后可获得真正的 AI 放大效果</p>
+
+          <div class="setting-group">
+            <label>
+              <input type="checkbox" id="ai-upscale-enabled">
+              启用 AI 放大
+            </label>
+          </div>
+
+          <div class="setting-group">
+            <label>API 服务商</label>
+            <select id="ai-upscale-provider">
+              <option value="">-- 请选择 --</option>
+              <option value="replicate">Replicate (ESRGAN/Real-ESRGAN)</option>
+              <option value="stability">Stability AI</option>
+              <option value="custom">自定义 API</option>
+            </select>
+          </div>
+
+          <div class="setting-group">
+            <label>API Key</label>
+            <input type="password" id="ai-upscale-apikey" placeholder="输入你的 API Key" style="width:100%;padding:8px 10px;border:1px solid #e0e0e0;border-radius:5px;font-size:12px;">
+          </div>
+
+          <div class="setting-group" id="ai-upscale-endpoint-group" style="display:none;">
+            <label>API Endpoint URL</label>
+            <input type="text" id="ai-upscale-endpoint" placeholder="https://your-api.com/upscale" style="width:100%;padding:8px 10px;border:1px solid #e0e0e0;border-radius:5px;font-size:12px;">
+          </div>
+        </div>
+
+        <div class="shortcuts-info">
+          <h3>GitHub 图床配置 (PicX)</h3>
+          <p style="font-size:11px;color:#999;margin-bottom:10px;">配置 GitHub 图床，支持图片上传、管理和加速访问</p>
+
+          <div class="setting-group">
+            <label>GitHub Token</label>
+            <input type="password" id="picx-token" placeholder="输入 GitHub Token (需要 repo 权限)" style="width:100%;padding:8px 10px;border:1px solid #e0e0e0;border-radius:5px;font-size:12px;">
+          </div>
+
+          <div class="setting-group">
+            <label>用户名</label>
+            <input type="text" id="picx-owner" placeholder="GitHub 用户名" style="width:100%;padding:8px 10px;border:1px solid #e0e0e0;border-radius:5px;font-size:12px;">
+          </div>
+
+          <div class="setting-group">
+            <label>仓库名</label>
+            <input type="text" id="picx-repo" placeholder="默认: picx-images-hosting" value="picx-images-hosting" style="width:100%;padding:8px 10px;border:1px solid #e0e0e0;border-radius:5px;font-size:12px;">
+          </div>
+
+          <div class="setting-group">
+            <label>分支</label>
+            <input type="text" id="picx-branch" placeholder="默认: master" value="master" style="width:100%;padding:8px 10px;border:1px solid #e0e0e0;border-radius:5px;font-size:12px;">
+          </div>
+
+          <div class="setting-group">
+            <label>图片加速方式</label>
+            <select id="picx-cdn-type" style="width:100%;padding:8px 10px;border:1px solid #e0e0e0;border-radius:5px;font-size:12px;">
+              <option value="github">GitHub 原始链接 (raw.githubusercontent.com)</option>
+              <option value="jsdelivr">jsDelivr CDN (cdn.jsdelivr.net)</option>
+              <option value="staticaly">Staticaly CDN (cdn.staticaly.com)</option>
+              <option value="ghproxy">ghproxy 加速 (ghproxy.com)</option>
+              <option value="i0wp">i0.wp.com 加速 (i0.wp.com)</option>
+              <option value="custom">自定义加速链接</option>
+            </select>
+          </div>
+
+          <div class="setting-group" id="picx-custom-cdn-group" style="display:none;">
+            <label>自定义加速链接</label>
+            <input type="text" id="picx-custom-cdn" placeholder="例如: https://your-cdn.com/{owner}/{repo}/{branch}" style="width:100%;padding:8px 10px;border:1px solid #e0e0e0;border-radius:5px;font-size:12px;">
+            <small style="font-size:11px;color:#999;margin-top:4px;display:block;">
+              支持变量: {owner} {repo} {branch} {path}<br>
+              示例: https://cdn.example.com/{owner}/{repo}@{branch}/{path}
+            </small>
+          </div>
+
+          <div class="setting-group">
+            <button id="picx-test-connection" class="btn btn-primary" style="margin-top:8px;">测试连接</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 图片预览模态框 -->
+    <div id="preview-modal" class="modal">
+      <div class="modal-content preview-modal-content panel-preview-modal">
+        <div class="modal-header">
+          <h2>图片预览</h2>
+          <button class="modal-close" id="preview-close">✕</button>
+        </div>
+        <div class="modal-body preview-modal-body">
+          <div class="preview-image-wrap">
+            <img id="preview-full-image" src="" alt="Preview">
+          </div>
+          <div class="preview-actions">
+            <button class="btn btn-primary" id="preview-download">下载</button>
+            <button class="btn btn-primary" id="preview-edit" style="background:#4CAF50;">编辑图片</button>
+            <button class="btn btn-primary" id="preview-upload-picx" style="background:#2196F3;">上传到图床</button>
+            <button class="btn btn-secondary" id="preview-copy-data">复制Data URL</button>
+            <button class="btn btn-secondary" id="preview-copy-base64">复制Base64</button>
+            <button class="btn btn-secondary" id="preview-open-url">新窗口打开</button>
+          </div>
+          <div class="preview-info">
+            <span id="preview-url"></span>
+            <span id="preview-dims"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 工具模态框 -->
+    <div id="tool-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modal-title">工具</h2>
+          <button class="modal-close" id="modal-close">✕</button>
+        </div>
+        <div class="modal-body" id="modal-body">
+          <!-- Dynamic content -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+  <script src="picx.js"></script>
+  <script src="picx-panel.js"></script>
+</body>
+</html>

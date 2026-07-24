@@ -1,0 +1,163 @@
+<!-- 图床标签页内容 - 纯操作页面，配置在设置中 -->
+<div class="picx-container">
+  <!-- 状态提示（未配置时显示） -->
+  <div class="section picx-status-section" id="picx-status-section" style="display:none;">
+    <div class="picx-status-msg">
+      <p>尚未配置图床信息</p>
+      <p class="hint">请先前往 <a href="#" id="picx-go-settings" style="color:#667eea;">设置</a> 页面配置 GitHub 图床</p>
+    </div>
+  </div>
+
+  <!-- 上传区域 -->
+  <div class="section picx-upload-area-section">
+    <div class="upload-area" id="picx-upload-area">
+      <div class="upload-content">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        <p>拖拽图片到此处，或点击选择文件</p>
+        <p class="hint">支持批量上传</p>
+      </div>
+      <input type="file" id="picx-file-input" multiple accept="image/*" style="display:none">
+    </div>
+    
+    <!-- 上传进度 -->
+    <div class="upload-progress" id="picx-upload-progress" style="display:none">
+      <div class="progress-bar">
+        <div class="progress-fill" id="picx-progress-fill"></div>
+      </div>
+      <div class="progress-text" id="picx-progress-text">上传中...</div>
+    </div>
+  </div>
+
+  <!-- 目录浏览与管理 -->
+  <div class="section picx-browser-section">
+    <div class="section-header">
+      <h2>图床管理</h2>
+      <div class="browser-controls">
+        <button class="btn btn-secondary" id="picx-refresh">刷新</button>
+      </div>
+    </div>
+    
+    <!-- 目录树 -->
+    <div class="directory-tree" id="picx-directory-tree">
+      <div class="tree-item active" data-path="">
+        <span class="tree-icon">📁</span>
+        <span class="tree-name">根目录</span>
+      </div>
+    </div>
+
+    <!-- 图片列表 -->
+    <div class="picx-image-grid" id="picx-image-grid">
+      <div class="empty-state">
+        <p>暂无图片</p>
+        <p class="hint">请上传图片</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 图片详情模态框 -->
+<div class="modal" id="picx-image-modal">
+  <div class="modal-content modal-large">
+    <div class="modal-header">
+      <h2 id="picx-image-title">图片详情</h2>
+      <button class="modal-close" id="picx-image-modal-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="image-preview-large">
+        <img id="picx-image-preview" src="" alt="">
+      </div>
+      <div class="image-info">
+        <div class="info-row">
+          <label>文件名:</label>
+          <span id="picx-image-name"></span>
+        </div>
+        <div class="info-row">
+          <label>路径:</label>
+          <span id="picx-image-path"></span>
+        </div>
+        <div class="info-row">
+          <label>大小:</label>
+          <span id="picx-image-size"></span>
+        </div>
+        <div class="info-row">
+          <label>链接:</label>
+          <div class="link-options">
+            <div class="link-item">
+              <label>原始链接:</label>
+              <input type="text" id="picx-image-url" readonly>
+              <button class="btn btn-small" data-copy="url">复制</button>
+            </div>
+            <div class="link-item">
+              <label>Markdown:</label>
+              <input type="text" id="picx-image-markdown" readonly>
+              <button class="btn btn-small" data-copy="markdown">复制</button>
+            </div>
+            <div class="link-item">
+              <label>HTML:</label>
+              <input type="text" id="picx-image-html" readonly>
+              <button class="btn btn-small" data-copy="html">复制</button>
+            </div>
+            <div class="link-item" id="picx-image-cdn-row">
+              <label>CDN加速:</label>
+              <input type="text" id="picx-image-cdn" readonly>
+              <button class="btn btn-small" data-copy="cdn">复制</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="picx-image-delete">删除图片</button>
+      <button class="btn btn-secondary" id="picx-image-close">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 上传配置对话框 -->
+<div class="modal" id="picx-upload-config-modal">
+  <div class="modal-content modal-large">
+    <div class="modal-header">
+      <h2>上传配置</h2>
+      <button class="modal-close" id="picx-upload-config-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="upload-config-section">
+        <div class="form-group">
+          <label>上传目录</label>
+          <input type="text" id="upload-config-path" placeholder="输入目录路径，例如: images/blog">
+          <small class="form-hint">目录不存在时会自动创建。留空则上传到根目录</small>
+        </div>
+
+        <div class="upload-options">
+          <div class="option-item">
+            <label class="checkbox-label">
+              <input type="checkbox" id="upload-config-auto-date">
+              <span>自动按日期创建子目录 (YYYY/MM/DD)</span>
+            </label>
+          </div>
+          <div class="option-item">
+            <label class="checkbox-label">
+              <input type="checkbox" id="upload-config-convert-webp" checked>
+              <span>自动转换为 WebP 格式</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>文件列表 <span style="color:#999;font-size:11px;">(可为每个文件单独重命名)</span></label>
+          <div class="upload-file-list" id="upload-config-file-list">
+            <!-- 动态生成 -->
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="upload-config-cancel">取消</button>
+      <button class="btn btn-primary" id="upload-config-confirm">开始上传</button>
+    </div>
+  </div>
+</div>
