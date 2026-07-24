@@ -1,5 +1,32 @@
 // Web Image Tool Pro - Popup
 
+// 通用复制函数（带 fallback）
+function copyToClipboard(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text).catch(() => {
+      return fallbackCopy(text);
+    });
+  }
+  return fallbackCopy(text);
+}
+
+function fallbackCopy(text) {
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  try {
+    document.execCommand('copy');
+    return Promise.resolve();
+  } catch (err) {
+    return Promise.reject(err);
+  } finally {
+    document.body.removeChild(textarea);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   // === Tab 切换 ===
   const tabs = document.querySelectorAll('.tab-btn');
@@ -304,8 +331,11 @@ document.addEventListener('DOMContentLoaded', function() {
       fetch(img.url).then(function(r) { return r.blob(); }).then(function(blob) {
         var reader = new FileReader();
         reader.onloadend = function() {
-          navigator.clipboard.writeText(reader.result);
-          showNotification('Data URL已复制');
+          copyToClipboard(reader.result).then(() => {
+            showNotification('Data URL已复制');
+          }).catch(() => {
+            showNotification('复制失败', 'error');
+          });
         };
         reader.readAsDataURL(blob);
       });
@@ -315,8 +345,11 @@ document.addEventListener('DOMContentLoaded', function() {
       fetch(img.url).then(function(r) { return r.blob(); }).then(function(blob) {
         var reader = new FileReader();
         reader.onloadend = function() {
-          navigator.clipboard.writeText(reader.result.split(',')[1]);
-          showNotification('Base64已复制');
+          copyToClipboard(reader.result.split(',')[1]).then(() => {
+            showNotification('Base64已复制');
+          }).catch(() => {
+            showNotification('复制失败', 'error');
+          });
         };
         reader.readAsDataURL(blob);
       });
@@ -892,12 +925,19 @@ document.addEventListener('DOMContentLoaded', function() {
           reader.readAsDataURL(blob);
         });
         document.getElementById('copy-b64').addEventListener('click', function() {
-          navigator.clipboard.writeText(output.value.split(',')[1]);
-          showNotification('Base64已复制');
+          copyToClipboard(output.value.split(',')[1]).then(() => {
+            showNotification('Base64已复制');
+          }).catch(() => {
+            showNotification('复制失败', 'error');
+          });
         });
+
         document.getElementById('copy-url').addEventListener('click', function() {
-          navigator.clipboard.writeText(output.value);
-          showNotification('Data URL已复制');
+          copyToClipboard(output.value).then(() => {
+            showNotification('Data URL已复制');
+          }).catch(() => {
+            showNotification('复制失败', 'error');
+          });
         });
         break;
     }
