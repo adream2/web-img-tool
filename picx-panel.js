@@ -3,6 +3,33 @@
 (function() {
   'use strict';
 
+  // 通用复制函数（带 fallback）
+  function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).catch(() => {
+        return fallbackCopy(text);
+      });
+    }
+    return fallbackCopy(text);
+  }
+
+  function fallbackCopy(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand('copy');
+      return Promise.resolve();
+    } catch (err) {
+      return Promise.reject(err);
+    } finally {
+      document.body.removeChild(textarea);
+    }
+  }
+
   let picxManager = null;
   let currentPath = '';
   let currentImage = null;
@@ -306,8 +333,11 @@
     // 复制链接
     item.querySelector('[title="复制链接"]').addEventListener('click', (e) => {
       e.stopPropagation();
-      navigator.clipboard.writeText(img.url);
-      showNotification('链接已复制');
+      copyToClipboard(img.url).then(() => {
+        showNotification('链接已复制');
+      }).catch(() => {
+        showNotification('复制失败', 'error');
+      });
     });
 
     // 点击显示详情
@@ -377,8 +407,11 @@
   function copyImageLink(type) {
     const input = document.getElementById(`picx-image-${type}`);
     if (input) {
-      navigator.clipboard.writeText(input.value);
-      showNotification('链接已复制');
+      copyToClipboard(input.value).then(() => {
+        showNotification('链接已复制');
+      }).catch(() => {
+        showNotification('复制失败', 'error');
+      });
     }
   }
 
