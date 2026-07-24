@@ -497,6 +497,9 @@
       });
     });
 
+    // 加载已有目录到 datalist
+    loadDirOptions();
+
     // 显示对话框
     modal.classList.add('active');
 
@@ -543,6 +546,7 @@
     
     progressDiv.style.display = 'block';
     
+    const uploadResults = [];
     let successCount = 0;
     let failCount = 0;
 
@@ -564,12 +568,28 @@
         const result = await picxManager.uploadImage(file, options);
         if (result.success) {
           successCount++;
+          uploadResults.push({
+            success: true,
+            filename: newName || file.name,
+            url: result.url,
+            path: result.path
+          });
         } else {
           failCount++;
+          uploadResults.push({
+            success: false,
+            filename: newName || file.name,
+            error: result.message
+          });
           console.error('上传失败:', result.message);
         }
       } catch (error) {
         failCount++;
+        uploadResults.push({
+          success: false,
+          filename: newName || file.name,
+          error: error.message
+        });
         console.error('上传失败:', error);
       }
     }
@@ -579,7 +599,12 @@
     setTimeout(() => {
       progressDiv.style.display = 'none';
       progressFill.style.width = '0%';
-    }, 3000);
+      
+      // 显示上传结果
+      if (uploadResults.length > 0) {
+        showUploadResults(uploadResults);
+      }
+    }, 1500);
 
     // 刷新图片列表
     loadImages(currentPath);
@@ -587,6 +612,66 @@
     if (successCount > 0) {
       showNotification(`成功上传 ${successCount} 张图片`);
     }
+  }
+
+  // 显示上传结果
+  function showUploadResults(results) {
+    const modal = document.getElementById('picx-upload-result-modal');
+    const listDiv = document.getElementById('upload-result-list');
+    
+    listDiv.innerHTML = results.map(result => {
+      if (result.success) {
+        const markdown = `![${result.filename}](${result.url})`;
+        return `
+          <div class="upload-result-item success">
+            <div class="result-header">
+              <span class="result-icon">✓</span>
+              <span class="result-filename">${result.filename}</span>
+            </div>
+            <div class="result-links">
+              <div class="link-row">
+                <label>URL:</label>
+                <input type="text" value="${result.url}" readonly onclick="this.select()">
+                <button class="btn btn-small copy-btn" data-text="${result.url}">复制</button>
+              </div>
+              <div class="link-row">
+                <label>Markdown:</label>
+                <input type="text" value="${markdown.replace(/"/g, '&quot;')}" readonly onclick="this.select()">
+                <button class="btn btn-small copy-btn" data-text="${markdown.replace(/"/g, '&quot;')}">复制</button>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        return `
+          <div class="upload-result-item failed">
+            <div class="result-header">
+              <span class="result-icon">✗</span>
+              <span class="result-filename">${result.filename}</span>
+            </div>
+            <div class="result-error">失败: ${result.error}</div>
+          </div>
+        `;
+      }
+    }).join('');
+    
+    // 绑定复制按钮事件
+    listDiv.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const text = this.dataset.text;
+        copyToClipboard(text).then(() => {
+          showNotification('已复制到剪贴板');
+        }).catch(() => {
+          showNotification('复制失败', 'error');
+        });
+      });
+    });
+    
+    modal.classList.add('active');
+    
+    // 绑定关闭事件
+    document.getElementById('upload-result-close').onclick = () => modal.classList.remove('active');
+    document.getElementById('upload-result-close-btn').onclick = () => modal.classList.remove('active');
   }
 
   // 生成文件哈希
@@ -609,6 +694,42 @@
   function renderQuickDirs(dirs) {
     // 快捷目录功能已移至上传配置对话框中
     // 这里可以保留用于其他用途
+  }
+
+  // 加载目录选项到 datalist
+  async function loadDirOptions() {
+    if (!picxManager) return;
+    
+    const datalist = document.getElementById('upload-dir-list');
+    if (!datalist) return;
+    
+    try {
+      // 递归获取所有目录
+      const allDirs = [];
+      await collectDirectories('', allDirs, 0);
+      
+      // 填充 datalist
+      datalist.innerHTML = allDirs.map(dir => `<option value="${dir}">`).join('');
+    } catch (error) {
+      console.error('加载目录失败:', error);
+    }
+  }
+
+  // 递归收集目录
+  async function collectDirectories(path, allDirs, depth) {
+    if (depth > 3) return; // 限制深度避免过多请求
+    
+    try {
+      const result = await picxManager.listDirectories(path);
+      if (result.success && result.directories.length > 0) {
+        for (const dir of result.directories) {
+          allDirs.push(dir.path);
+          await collectDirectories(dir.path, allDirs, depth + 1);
+        }
+      }
+    } catch (error) {
+      console.error('加载目录失败:', path, error);
+    }
   }
 
   // 格式化文件大小

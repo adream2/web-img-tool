@@ -117,6 +117,22 @@
   </div>
 </div>
 
+<!-- 上传结果对话框 -->
+<div class="modal" id="picx-upload-result-modal">
+  <div class="modal-content modal-large">
+    <div class="modal-header">
+      <h2>上传结果</h2>
+      <button class="modal-close" id="upload-result-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="upload-result-list"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="upload-result-close-btn">关闭</button>
+    </div>
+  </div>
+</div>
+
 <!-- 上传配置对话框 -->
 <div class="modal" id="picx-upload-config-modal">
   <div class="modal-content modal-large">
@@ -128,8 +144,9 @@
       <div class="upload-config-section">
         <div class="form-group">
           <label>上传目录</label>
-          <input type="text" id="upload-config-path" placeholder="输入目录路径，例如: images/blog">
-          <small class="form-hint">目录不存在时会自动创建。留空则上传到根目录</small>
+          <input type="text" id="upload-config-path" list="upload-dir-list" placeholder="选择已有目录或输入新路径，例如: images/blog">
+          <datalist id="upload-dir-list"></datalist>
+          <small class="form-hint">可从已有目录中选择，也可直接输入新路径。目录不存在时会自动创建</small>
         </div>
 
         <div class="upload-options">
