@@ -119,6 +119,17 @@ class PicXManager {
     try {
       // 处理文件名
       let filename = options.filename || file.name;
+
+      // 如果重命名后没有扩展名，从 MIME 类型自动补全
+      if (filename && !filename.includes('.') && !filename.endsWith('.')) {
+        const extMap = {
+          'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
+          'image/gif': 'gif', 'image/svg+xml': 'svg', 'image/bmp': 'bmp',
+          'image/avif': 'avif', 'image/x-icon': 'ico'
+        };
+        filename += '.' + (extMap[file.type] || 'jpg');
+      }
+
       if (options.hashName) {
         const hash = await this.generateHash(file);
         const ext = filename.split('.').pop();
