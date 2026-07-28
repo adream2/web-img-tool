@@ -64,6 +64,7 @@
         <div class="actions">
           <button id="select-all-btn" class="btn btn-secondary">全选</button>
           <button id="batch-download-btn" class="btn btn-primary">批量下载</button>
+          <button id="batch-upload-btn" class="btn btn-primary" style="background:#2196F3;">批量上传图床</button>
         </div>
       </div>
     </div>
@@ -87,7 +88,7 @@
         <div id="preview-area" class="preview-area" style="display:none">
           <div class="preview-header">
             <h3>图片预览</h3>
-            <button id="clear-preview" class="btn-icon"></button>
+            <button id="clear-preview" class="btn-icon">✕</button>
           </div>
           <div class="preview-content">
             <img id="preview-image" src="" alt="Preview">
@@ -115,17 +116,17 @@
             <p>调整质量和大小</p>
           </div>
           <div class="tool-card" data-tool="convert">
-            <div class="tool-icon"></div>
+            <div class="tool-icon">🔄</div>
             <h3>格式转换</h3>
             <p>JPG/PNG/WebP</p>
           </div>
           <div class="tool-card" data-tool="upscale">
-            <div class="tool-icon"></div>
+            <div class="tool-icon">🔍</div>
             <h3>图片放大</h3>
             <p>算法放大</p>
           </div>
           <div class="tool-card" data-tool="base64">
-            <div class="tool-icon"></div>
+            <div class="tool-icon">📋</div>
             <h3>转Base64</h3>
             <p>转换为编码格式</p>
           </div>

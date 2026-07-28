@@ -100,22 +100,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
       if (!config.picxToken || !config.picxOwner) {
         showNotification('请先配置图床信息', 'error');
-        // 切换到图床标签页
-        const picxTab = document.querySelector('[data-tab="picx"]');
-        if (picxTab) picxTab.click();
         return;
       }
 
       // 显示上传配置对话框
-      showUploadConfigDialog([{ url: imageUrl, filename: filename }], config);
+      showPopupUploadDialog([{ url: imageUrl, filename: filename }], config);
     } catch (error) {
       console.error('上传失败:', error);
       showNotification('上传失败: ' + error.message, 'error');
     }
   }
 
-  // === 显示上传配置对话框 ===
-  async function showUploadConfigDialog(files, config) {
+  // === 弹窗版上传配置对话框（带目录选择） ===
+  function showPopupUploadDialog(files, config) {
     // 创建对话框
     const modal = document.createElement('div');
     modal.className = 'modal';
@@ -128,28 +125,29 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="modal-body">
           <div class="upload-config-section">
             <div class="form-group">
-              <label>上传目录</label>
-              <input type="text" id="upload-dialog-path" placeholder="输入目录路径，例如: images/blog" value="${config.picxUploadPath || ''}">
-              <small class="form-hint">目录不存在时会自动创建。留空则上传到根目录</small>
+              <label>上传目录 <span style="font-weight:400;color:#999;font-size:11px;">（可从现有目录中选择或输入新路径）</span></label>
+              <input type="text" id="popup-upload-path" list="popup-dir-list" placeholder="选择已有目录或输入新路径，例如: images/blog" value="${config.picxUploadPath || ''}">
+              <datalist id="popup-dir-list"></datalist>
+              <small class="form-hint">目录不存在时上传时自动创建。留空则上传到根目录</small>
             </div>
 
             <div class="upload-options">
               <div class="option-item">
                 <label class="checkbox-label">
-                  <input type="checkbox" id="upload-dialog-auto-date" ${config.picxAutoDateDir ? 'checked' : ''}>
+                  <input type="checkbox" id="popup-upload-auto-date" ${config.picxAutoDateDir ? 'checked' : ''}>
                   <span>自动按日期创建子目录 (YYYY/MM/DD)</span>
                 </label>
               </div>
               <div class="option-item">
                 <label class="checkbox-label">
-                  <input type="checkbox" id="upload-dialog-convert-webp" ${config.picxConvertWebp ? 'checked' : ''}>
+                  <input type="checkbox" id="popup-upload-convert-webp" ${config.picxConvertWebp ? 'checked' : ''}>
                   <span>自动转换为 WebP 格式</span>
                 </label>
               </div>
             </div>
 
             <div class="form-group">
-              <label>文件名 <span style="color:#999;font-size:11px;">(留空使用原文件名)</span></label>
+              <label>文件列表 <span style="color:#999;font-size:11px;">(可为每个文件单独重命名)</span></label>
               <div class="upload-file-list">
                 ${files.map((file, index) => `
                   <div class="upload-file-item" data-index="${index}">
@@ -170,14 +168,34 @@ document.addEventListener('DOMContentLoaded', function() {
           </div>
         </div>
         <div class="modal-actions">
-          <button class="btn btn-secondary" id="upload-dialog-cancel">取消</button>
-          <button class="btn btn-primary" id="upload-dialog-confirm">开始上传</button>
+          <button class="btn btn-secondary" id="popup-upload-cancel">取消</button>
+          <button class="btn btn-primary" id="popup-upload-confirm">开始上传</button>
         </div>
       </div>
     `;
 
     document.body.appendChild(modal);
     modal.classList.add('active');
+
+    // 异步加载已有目录到 datalist
+    (async () => {
+      try {
+        const picx = new PicXManager({
+          token: config.picxToken,
+          owner: config.picxOwner,
+          repo: config.picxRepo,
+          branch: config.picxBranch
+        });
+        const allDirs = [];
+        await collectDirs(picx, '', allDirs, 0);
+        const datalist = modal.querySelector('#popup-dir-list');
+        if (datalist && allDirs.length > 0) {
+          datalist.innerHTML = allDirs.map(d => `<option value="${escapeHtml(d)}">`).join('');
+        }
+      } catch (e) {
+        // 目录加载失败不影响功能，用户可手动输入
+      }
+    })();
 
     // 绑定哈希按钮
     modal.querySelectorAll('.hash-name-btn').forEach(btn => {
@@ -193,93 +211,158 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 关闭按钮
     modal.querySelector('.modal-close').onclick = () => modal.remove();
-    modal.querySelector('#upload-dialog-cancel').onclick = () => modal.remove();
+    modal.querySelector('#popup-upload-cancel').onclick = () => modal.remove();
 
     // 确认上传
-    modal.querySelector('#upload-dialog-confirm').onclick = async () => {
-      modal.remove();
-      
-      const uploadPath = modal.querySelector('#upload-dialog-path').value;
-      const autoDateDir = modal.querySelector('#upload-dialog-auto-date').checked;
-      const convertToWebp = modal.querySelector('#upload-dialog-convert-webp').checked;
+    modal.querySelector('#popup-upload-confirm').onclick = async () => {
+      const path = modal.querySelector('#popup-upload-path').value;
+      const autoDateDir = modal.querySelector('#popup-upload-auto-date').checked;
+      const convertToWebp = modal.querySelector('#popup-upload-convert-webp').checked;
 
-      // 收集重命名
+      // 在 modal.remove() 前先收集重命名（避免查询已移除的 DOM）
       const renamedFiles = files.map((file, index) => {
         const renameInput = modal.querySelector(`.rename-input[data-index="${index}"]`);
-        const newName = renameInput.value.trim();
+        const newName = renameInput ? renameInput.value.trim() : '';
         return {
           url: file.url,
           filename: newName || file.filename
         };
       });
 
-      // 执行上传
-      await executeUploadToPicx(renamedFiles, {
+      modal.remove();
+
+      await executePopupUpload(renamedFiles, {
         ...config,
-        uploadPath,
+        uploadPath: path,
         autoDateDir,
         convertToWebp
       });
     };
   }
 
-  // === 执行上传到图床 ===
-  async function executeUploadToPicx(files, config) {
+  // 递归收集 GitHub 目录
+  async function collectDirs(picx, path, allDirs, depth) {
+    if (depth > 3) return;
+    const result = await picx.listDirectories(path);
+    if (result.success && result.directories.length > 0) {
+      for (const dir of result.directories) {
+        allDirs.push(dir.path);
+        await collectDirs(picx, dir.path, allDirs, depth + 1);
+      }
+    }
+  }
+
+  // === 弹窗版执行上传（带结果展示） ===
+  async function executePopupUpload(files, config) {
     showNotification('正在上传图片...');
 
+    const picx = new PicXManager({
+      token: config.picxToken,
+      owner: config.picxOwner,
+      repo: config.picxRepo,
+      branch: config.picxBranch,
+      cdnType: config.picxCdnType,
+      customCdn: config.picxCustomCdn
+    });
+
+    const results = [];
     let successCount = 0;
     let failCount = 0;
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      
       try {
-        // 获取图片 Blob
         const response = await fetch(file.url);
         const blob = await response.blob();
         const fileObj = new File([blob], file.filename, { type: blob.type });
 
-        // 创建 PicX 管理器实例
-        const picx = new PicXManager({
-          token: config.picxToken,
-          owner: config.picxOwner,
-          repo: config.picxRepo,
-          branch: config.picxBranch,
-          cdnType: config.picxCdnType,
-          customCdn: config.picxCustomCdn
-        });
-
-        // 上传选项
-        const options = {
+        const result = await picx.uploadImage(fileObj, {
           path: config.uploadPath,
           autoDateDir: config.autoDateDir,
           convertToWebp: config.convertToWebp,
           filename: file.filename
-        };
-
-        // 执行上传
-        const result = await picx.uploadImage(fileObj, options);
+        });
 
         if (result.success) {
           successCount++;
-          // 复制链接到剪贴板
-          navigator.clipboard.writeText(result.url).then(() => {
-            showNotification(`图片链接已复制: ${file.filename}`, 'success');
-          });
+          results.push({ success: true, filename: file.filename, url: result.url, path: result.path });
         } else {
           failCount++;
-          showNotification('上传失败: ' + result.message, 'error');
+          results.push({ success: false, filename: file.filename, error: result.message });
         }
       } catch (error) {
         failCount++;
-        console.error('上传失败:', error);
-        showNotification('上传失败: ' + error.message, 'error');
+        results.push({ success: false, filename: file.filename, error: error.message });
       }
     }
 
-    if (successCount > 0) {
-      showNotification(`成功上传 ${successCount} 张图片`, 'success');
-    }
+    // 显示上传结果弹窗（带 URL + Markdown）
+    showPopupUploadResults(results);
+  }
+
+  // === 弹窗版上传结果展示 ===
+  function showPopupUploadResults(results) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content modal-large">
+        <div class="modal-header">
+          <h2>上传结果</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body" style="max-height:400px;overflow-y:auto;">
+          ${results.map(r => r.success ? `
+            <div class="upload-result-item success" style="margin-bottom:12px;padding:10px;border:1px solid #e0e0e0;border-radius:6px;">
+              <div style="font-weight:600;color:#4CAF50;margin-bottom:6px;">✓ ${escapeHtml(r.filename)}</div>
+              <div style="margin-bottom:4px;">
+                <label style="font-size:11px;color:#888;">URL:</label>
+                <input type="text" value="${escapeHtml(r.url)}" readonly
+                  style="width:100%;padding:5px 8px;border:1px solid #ddd;border-radius:4px;font-size:11px;margin-top:2px;"
+                  onclick="this.select()">
+                <button class="popup-copy-btn" data-text="${escapeHtml(r.url)}"
+                  style="margin-top:3px;padding:3px 8px;background:#667eea;color:white;border:none;border-radius:3px;cursor:pointer;font-size:11px;">复制 URL</button>
+              </div>
+              <div>
+                <label style="font-size:11px;color:#888;">Markdown:</label>
+                <input type="text" value="${escapeHtml('![' + r.filename + '](' + r.url + ')')}" readonly
+                  style="width:100%;padding:5px 8px;border:1px solid #ddd;border-radius:4px;font-size:11px;margin-top:2px;font-family:monospace;"
+                  onclick="this.select()">
+                <button class="popup-copy-btn" data-text="${escapeHtml('![' + r.filename + '](' + r.url + ')')}"
+                  style="margin-top:3px;padding:3px 8px;background:#667eea;color:white;border:none;border-radius:3px;cursor:pointer;font-size:11px;">复制 Markdown</button>
+              </div>
+            </div>
+          ` : `
+            <div class="upload-result-item failed" style="margin-bottom:8px;padding:10px;border:1px solid #f44336;border-radius:6px;">
+              <div style="font-weight:600;color:#f44336;">✗ ${escapeHtml(r.filename)}</div>
+              <div style="font-size:12px;color:#888;margin-top:4px;">失败: ${escapeHtml(r.error || '未知错误')}</div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-primary" id="popup-result-close">关闭</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    modal.classList.add('active');
+
+    // 绑定复制按钮
+    modal.querySelectorAll('.popup-copy-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const text = this.dataset.text;
+        copyToClipboard(text).then(() => showNotification('已复制到剪贴板'))
+          .catch(() => showNotification('复制失败', 'error'));
+      });
+    });
+
+    modal.querySelector('.modal-close').onclick = () => modal.remove();
+    modal.querySelector('#popup-result-close').onclick = () => modal.remove();
+  }
+
+  // === HTML 转义辅助 ===
+  function escapeHtml(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   // === 生成文件哈希 ===
@@ -315,12 +398,15 @@ document.addEventListener('DOMContentLoaded', function() {
       chrome.runtime.sendMessage({ action: 'downloadImage', url: img.url, filename: img.alt || 'image' });
     };
 
-    editBtn.onclick = function() {
-      previewModal.classList.remove('active');
-      loadImageToEditor(img.url, img.alt || 'image');
-    };
+    // 编辑图片按钮（仅 panel.html 中有，popup.html 中不存在）
+    if (editBtn) {
+      editBtn.onclick = function() {
+        previewModal.classList.remove('active');
+        loadImageToEditor(img.url, img.alt || 'image');
+      };
+    }
 
-    // 上传到图床
+    // 上传到图床按钮（仅 panel.html 中有）
     if (uploadBtn) {
       uploadBtn.onclick = function() {
         uploadImageToPicx(img.url, img.alt || 'image');
@@ -588,6 +674,207 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     showNotification('正在下载 ' + cbs.length + ' 张图片');
   });
+
+  // === 批量上传到图床 ===
+  document.getElementById('batch-upload-btn').addEventListener('click', function() {
+    var cbs = document.querySelectorAll('.grid-checkbox:checked');
+    if (cbs.length === 0) {
+      showNotification('请先选择要上传的图片', 'error');
+      return;
+    }
+
+    // 获取图床配置
+    chrome.storage.sync.get({
+      picxToken: '', picxOwner: '', picxRepo: 'picx-images-hosting',
+      picxBranch: 'master', picxCdnType: 'github', picxCustomCdn: '',
+      picxUploadPath: '', picxAutoDateDir: false, picxConvertWebp: true
+    }, function(config) {
+      if (!config.picxToken || !config.picxOwner) {
+        showNotification('请先配置图床信息', 'error');
+        return;
+      }
+
+      // 收集选中的图片
+      var images = Array.from(cbs).map(function(cb) {
+        return { url: decodeURIComponent(cb.dataset.url), filename: 'image' };
+      });
+
+      // 获取当前标签页网址作为子目录名
+      chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+        var tabUrl = tabs[0] ? tabs[0].url : '';
+        showBatchUploadDialog(images, tabUrl, config);
+      });
+    });
+  });
+
+  // === 网站 URL → 目录名 ===
+  function getWebsiteDirName(url) {
+    try {
+      var hostname = new URL(url).hostname;
+      return hostname
+        .replace(/^www\./, '')
+        .replace(/[.:]+/g, '-')
+        .toLowerCase();
+    } catch (e) {
+      return '';
+    }
+  }
+
+  // === 批量上传对话框 ===
+  function showBatchUploadDialog(images, tabUrl, config) {
+    var websiteDir = getWebsiteDirName(tabUrl);
+
+    var modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content modal-large">
+        <div class="modal-header">
+          <h2>批量上传 (${images.length}张)</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="upload-config-section">
+            <div class="form-group">
+              <label>根目录 <span style="font-weight:400;color:#999;font-size:11px;">（可留空或选择现有目录）</span></label>
+              <input type="text" id="batch-root-path" list="batch-dir-list"
+                placeholder="例如: images/screenshots" value="${escapeHtml(config.picxUploadPath || '')}">
+              <datalist id="batch-dir-list"></datalist>
+            </div>
+
+            ${websiteDir ? `
+            <div class="form-group" style="margin-top:8px;padding:8px 10px;background:#f0f7ff;border-radius:5px;border:1px solid #d0e3ff;">
+              <label style="font-size:12px;color:#1976D2;">
+                📁 网站子目录：<strong>${escapeHtml(websiteDir)}</strong>
+                <span style="font-weight:400;">（将自动创建，所有图片上传至此目录下）</span>
+              </label>
+            </div>
+            <input type="hidden" id="batch-website-dir" value="${escapeHtml(websiteDir)}">
+            ` : ''}
+
+            <div class="upload-options" style="margin-top:10px;">
+              <div class="option-item">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="batch-upload-auto-date" ${config.picxAutoDateDir ? 'checked' : ''}>
+                  <span>自动按日期创建子目录 (YYYY/MM/DD)</span>
+                </label>
+              </div>
+              <div class="option-item">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="batch-upload-convert-webp" ${config.picxConvertWebp ? 'checked' : ''}>
+                  <span>自动转换为 WebP 格式</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>文件列表 (${images.length}张)</label>
+              <div class="upload-file-list" style="max-height:180px;overflow-y:auto;">
+                ${images.map(function(img, idx) {
+                  var fn = img.filename || ('image_' + (idx + 1));
+                  return '<div class="upload-file-item" data-index="' + idx + '">' +
+                    '<div class="file-preview">' +
+                    '<img src="' + escapeHtml(img.url) + '" alt="" style="width:40px;height:40px;object-fit:cover;border-radius:3px;">' +
+                    '</div>' +
+                    '<div class="file-info">' +
+                    '<div class="file-name" style="font-size:11px;">' + escapeHtml(fn) + '</div>' +
+                    '</div></div>';
+                }).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" id="batch-upload-cancel">取消</button>
+          <button class="btn btn-primary" id="batch-upload-confirm" style="background:#2196F3;">
+            开始上传 ${images.length} 张
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    modal.classList.add('active');
+
+    // 异步加载已有目录到 datalist
+    (function loadDirs() {
+      var picx = new PicXManager({
+        token: config.picxToken, owner: config.picxOwner,
+        repo: config.picxRepo, branch: config.picxBranch
+      });
+      (async function() {
+        try {
+          var allDirs = [];
+          await collectDirs(picx, '', allDirs, 0);
+          var list = modal.querySelector('#batch-dir-list');
+          if (list && allDirs.length > 0) {
+            list.innerHTML = allDirs.map(function(d) { return '<option value="' + escapeHtml(d) + '">'; }).join('');
+          }
+        } catch (e) {}
+      })();
+    })();
+
+    // 关闭按钮
+    modal.querySelector('.modal-close').onclick = function() { modal.remove(); };
+    modal.querySelector('#batch-upload-cancel').onclick = function() { modal.remove(); };
+
+    // 确认上传
+    modal.querySelector('#batch-upload-confirm').onclick = async function() {
+      var rootPath = modal.querySelector('#batch-root-path').value.trim();
+      var autoDateDir = modal.querySelector('#batch-upload-auto-date').checked;
+      var convertToWebp = modal.querySelector('#batch-upload-convert-webp').checked;
+      modal.remove();
+
+      // 构建上传路径：根目录/网站子目录
+      var uploadPath = rootPath || '';
+      if (websiteDir) {
+        uploadPath = uploadPath ? uploadPath + '/' + websiteDir : websiteDir;
+      }
+
+      showNotification('正在批量上传 ' + images.length + ' 张图片...');
+
+      var picx = new PicXManager({
+        token: config.picxToken, owner: config.picxOwner,
+        repo: config.picxRepo, branch: config.picxBranch,
+        cdnType: config.picxCdnType, customCdn: config.picxCustomCdn
+      });
+
+      var results = [];
+      var successCount = 0;
+      var failCount = 0;
+
+      for (var i = 0; i < images.length; i++) {
+        var img = images[i];
+        try {
+          var resp = await fetch(img.url);
+          var blob = await resp.blob();
+          var ext = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+          var filename = img.filename || ('image_' + (i + 1));
+          if (!filename.includes('.')) filename += '.' + ext;
+          var fileObj = new File([blob], filename, { type: blob.type });
+
+          var result = await picx.uploadImage(fileObj, {
+            path: uploadPath,
+            autoDateDir: autoDateDir,
+            convertToWebp: convertToWebp,
+            filename: filename
+          });
+
+          if (result.success) {
+            successCount++;
+            results.push({ success: true, filename: filename, url: result.url, path: result.path });
+          } else {
+            failCount++;
+            results.push({ success: false, filename: filename, error: result.message });
+          }
+        } catch (error) {
+          failCount++;
+          results.push({ success: false, filename: filename, error: error.message });
+        }
+      }
+
+      showPopupUploadResults(results);
+    };
+  }
 
   // === 图片处理 Tab ===
   var uploadArea = document.getElementById('upload-area');
@@ -1105,18 +1392,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // === 设置 Tab ===
   var dq = document.getElementById('default-quality');
-  dq.addEventListener('input', function() {
-    document.getElementById('default-quality-value').textContent = dq.value + '%';
-  });
+  if (dq) {
+    dq.addEventListener('input', function() {
+      var v = document.getElementById('default-quality-value');
+      if (v) v.textContent = dq.value + '%';
+    });
+  }
 
-  // AI 放大配置
+  // AI 放大配置（仅 panel.html 中有，popup.html 无此区域）
   var aiProvider = document.getElementById('ai-upscale-provider');
   var aiEndpointGroup = document.getElementById('ai-upscale-endpoint-group');
-  
-  aiProvider.addEventListener('change', function() {
-    aiEndpointGroup.style.display = this.value === 'custom' ? 'block' : 'none';
-    chrome.storage.sync.set({ aiUpscaleProvider: this.value });
-  });
+  if (aiProvider && aiEndpointGroup) {
+    aiProvider.addEventListener('change', function() {
+      aiEndpointGroup.style.display = this.value === 'custom' ? 'block' : 'none';
+      chrome.storage.sync.set({ aiUpscaleProvider: this.value });
+    });
+  }
 
   chrome.storage.sync.get({
     defaultFormat: 'original',
@@ -1134,80 +1425,85 @@ document.addEventListener('DOMContentLoaded', function() {
     picxCdnType: 'github',
     picxCustomCdn: ''
   }, function(s) {
-    document.getElementById('default-format').value = s.defaultFormat;
-    dq.value = s.defaultQuality;
-    document.getElementById('default-quality-value').textContent = s.defaultQuality + '%';
-    document.getElementById('auto-detect').checked = s.autoDetect;
-    document.getElementById('show-notifications').checked = s.showNotifications;
+    var el;
+    // 基础设置（共享）
+    el = document.getElementById('default-format'); if (el) el.value = s.defaultFormat;
+    if (dq) { dq.value = s.defaultQuality; }
+    el = document.getElementById('default-quality-value'); if (el) el.textContent = s.defaultQuality + '%';
+    el = document.getElementById('auto-detect'); if (el) el.checked = s.autoDetect;
+    el = document.getElementById('show-notifications'); if (el) el.checked = s.showNotifications;
     
-    // AI 放大配置
-    document.getElementById('ai-upscale-enabled').checked = s.aiUpscaleEnabled;
-    aiProvider.value = s.aiUpscaleProvider;
-    document.getElementById('ai-upscale-apikey').value = s.aiUpscaleApiKey;
-    document.getElementById('ai-upscale-endpoint').value = s.aiUpscaleEndpoint;
-    aiEndpointGroup.style.display = s.aiUpscaleProvider === 'custom' ? 'block' : 'none';
+    // AI 放大配置（仅 panel）
+    el = document.getElementById('ai-upscale-enabled'); if (el) el.checked = s.aiUpscaleEnabled;
+    if (aiProvider) aiProvider.value = s.aiUpscaleProvider;
+    el = document.getElementById('ai-upscale-apikey'); if (el) el.value = s.aiUpscaleApiKey;
+    el = document.getElementById('ai-upscale-endpoint'); if (el) el.value = s.aiUpscaleEndpoint;
+    if (aiEndpointGroup) aiEndpointGroup.style.display = s.aiUpscaleProvider === 'custom' ? 'block' : 'none';
     
-    // GitHub 图床配置
-    document.getElementById('picx-token').value = s.picxToken;
-    document.getElementById('picx-owner').value = s.picxOwner;
-    document.getElementById('picx-repo').value = s.picxRepo;
-    document.getElementById('picx-branch').value = s.picxBranch;
-    document.getElementById('picx-cdn-type').value = s.picxCdnType;
-    document.getElementById('picx-custom-cdn').value = s.picxCustomCdn;
-    document.getElementById('picx-custom-cdn-group').style.display = s.picxCdnType === 'custom' ? 'block' : 'none';
+    // GitHub 图床配置（仅 panel）
+    el = document.getElementById('picx-token'); if (el) el.value = s.picxToken;
+    el = document.getElementById('picx-owner'); if (el) el.value = s.picxOwner;
+    el = document.getElementById('picx-repo'); if (el) el.value = s.picxRepo;
+    el = document.getElementById('picx-branch'); if (el) el.value = s.picxBranch;
+    el = document.getElementById('picx-cdn-type'); if (el) el.value = s.picxCdnType;
+    el = document.getElementById('picx-custom-cdn'); if (el) el.value = s.picxCustomCdn;
+    el = document.getElementById('picx-custom-cdn-group'); if (el) el.style.display = s.picxCdnType === 'custom' ? 'block' : 'none';
   });
 
-  document.getElementById('default-format').addEventListener('change', function() {
+  // 基础设置保存（共享）
+  el = document.getElementById('default-format'); if (el) el.addEventListener('change', function() {
     chrome.storage.sync.set({ defaultFormat: this.value });
   });
-  dq.addEventListener('change', function() {
-    chrome.storage.sync.set({ defaultQuality: parseInt(this.value) });
-  });
-  document.getElementById('auto-detect').addEventListener('change', function() {
+  if (dq) {
+    dq.addEventListener('change', function() {
+      chrome.storage.sync.set({ defaultQuality: parseInt(this.value) });
+    });
+  }
+  el = document.getElementById('auto-detect'); if (el) el.addEventListener('change', function() {
     chrome.storage.sync.set({ autoDetect: this.checked });
   });
-  document.getElementById('show-notifications').addEventListener('change', function() {
+  el = document.getElementById('show-notifications'); if (el) el.addEventListener('change', function() {
     chrome.storage.sync.set({ showNotifications: this.checked });
   });
   
-  // AI 放大配置保存
-  document.getElementById('ai-upscale-enabled').addEventListener('change', function() {
+  // AI 放大配置保存（仅 panel）
+  el = document.getElementById('ai-upscale-enabled'); if (el) el.addEventListener('change', function() {
     chrome.storage.sync.set({ aiUpscaleEnabled: this.checked });
   });
-  document.getElementById('ai-upscale-apikey').addEventListener('change', function() {
+  el = document.getElementById('ai-upscale-apikey'); if (el) el.addEventListener('change', function() {
     chrome.storage.sync.set({ aiUpscaleApiKey: this.value });
   });
-  document.getElementById('ai-upscale-endpoint').addEventListener('change', function() {
+  el = document.getElementById('ai-upscale-endpoint'); if (el) el.addEventListener('change', function() {
     chrome.storage.sync.set({ aiUpscaleEndpoint: this.value });
   });
 
-  // GitHub 图床配置保存
+  // GitHub 图床配置保存（仅 panel）
   var picxCdnType = document.getElementById('picx-cdn-type');
   var picxCustomCdnGroup = document.getElementById('picx-custom-cdn-group');
-  
-  picxCdnType.addEventListener('change', function() {
-    picxCustomCdnGroup.style.display = this.value === 'custom' ? 'block' : 'none';
-    chrome.storage.sync.set({ picxCdnType: this.value });
-  });
-
-  document.getElementById('picx-token').addEventListener('change', function() {
+  if (picxCdnType && picxCustomCdnGroup) {
+    picxCdnType.addEventListener('change', function() {
+      picxCustomCdnGroup.style.display = this.value === 'custom' ? 'block' : 'none';
+      chrome.storage.sync.set({ picxCdnType: this.value });
+    });
+  }
+  el = document.getElementById('picx-token'); if (el) el.addEventListener('change', function() {
     chrome.storage.sync.set({ picxToken: this.value });
   });
-  document.getElementById('picx-owner').addEventListener('change', function() {
+  el = document.getElementById('picx-owner'); if (el) el.addEventListener('change', function() {
     chrome.storage.sync.set({ picxOwner: this.value });
   });
-  document.getElementById('picx-repo').addEventListener('change', function() {
+  el = document.getElementById('picx-repo'); if (el) el.addEventListener('change', function() {
     chrome.storage.sync.set({ picxRepo: this.value });
   });
-  document.getElementById('picx-branch').addEventListener('change', function() {
+  el = document.getElementById('picx-branch'); if (el) el.addEventListener('change', function() {
     chrome.storage.sync.set({ picxBranch: this.value });
   });
-  document.getElementById('picx-custom-cdn').addEventListener('change', function() {
+  el = document.getElementById('picx-custom-cdn'); if (el) el.addEventListener('change', function() {
     chrome.storage.sync.set({ picxCustomCdn: this.value });
   });
 
-  // 测试连接按钮
-  document.getElementById('picx-test-connection').addEventListener('click', async function() {
+  // 测试连接按钮（仅 panel）
+  el = document.getElementById('picx-test-connection'); if (el) el.addEventListener('click', async function() {
     const token = document.getElementById('picx-token').value;
     const owner = document.getElementById('picx-owner').value;
     const repo = document.getElementById('picx-repo').value;

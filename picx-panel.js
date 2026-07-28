@@ -140,13 +140,35 @@
     // 刷新
     document.getElementById('picx-refresh').addEventListener('click', loadDirectoryTree);
 
-    // 模态框关闭
+    // 模态框关闭（图片详情）
     document.getElementById('picx-image-modal-close').addEventListener('click', () => {
       document.getElementById('picx-image-modal').classList.remove('active');
     });
     document.getElementById('picx-image-close').addEventListener('click', () => {
       document.getElementById('picx-image-modal').classList.remove('active');
     });
+
+    // 模态框关闭（上传配置）
+    const uploadConfigClose = document.getElementById('picx-upload-config-close');
+    if (uploadConfigClose) {
+      uploadConfigClose.addEventListener('click', () => {
+        document.getElementById('picx-upload-config-modal').classList.remove('active');
+      });
+    }
+
+    // 模态框关闭（上传结果）
+    const uploadResultClose = document.getElementById('upload-result-close');
+    const uploadResultCloseBtn = document.getElementById('upload-result-close-btn');
+    if (uploadResultClose) {
+      uploadResultClose.addEventListener('click', () => {
+        document.getElementById('picx-upload-result-modal').classList.remove('active');
+      });
+    }
+    if (uploadResultCloseBtn) {
+      uploadResultCloseBtn.addEventListener('click', () => {
+        document.getElementById('picx-upload-result-modal').classList.remove('active');
+      });
+    }
 
     // 删除图片
     document.getElementById('picx-image-delete').addEventListener('click', deleteCurrentImage);
@@ -363,7 +385,6 @@
     const html = `<img src="${rawUrl}" alt="${img.name}" />`;
     
     document.getElementById('picx-image-url').value = rawUrl;
-    document.getElementById('picx-image-jsdelivr').value = jsdelivrUrl;
     document.getElementById('picx-image-markdown').value = markdown;
     document.getElementById('picx-image-html').value = html;
     
@@ -618,26 +639,33 @@
   function showUploadResults(results) {
     const modal = document.getElementById('picx-upload-result-modal');
     const listDiv = document.getElementById('upload-result-list');
-    
+    if (!modal || !listDiv) return;
+
     listDiv.innerHTML = results.map(result => {
       if (result.success) {
         const markdown = `![${result.filename}](${result.url})`;
+        const cdnUrl = picxManager ? picxManager.generateImageUrl(result.path) : result.url;
         return `
           <div class="upload-result-item success">
             <div class="result-header">
               <span class="result-icon">✓</span>
-              <span class="result-filename">${result.filename}</span>
+              <span class="result-filename">${escapeHtml(result.filename)}</span>
             </div>
             <div class="result-links">
               <div class="link-row">
                 <label>URL:</label>
-                <input type="text" value="${result.url}" readonly onclick="this.select()">
-                <button class="btn btn-small copy-btn" data-text="${result.url}">复制</button>
+                <input type="text" value="${escapeHtml(result.url)}" readonly onclick="this.select()">
+                <button class="btn btn-small pxc-copy-btn" data-clip="${escapeHtml(result.url)}">复制</button>
               </div>
               <div class="link-row">
                 <label>Markdown:</label>
-                <input type="text" value="${markdown.replace(/"/g, '&quot;')}" readonly onclick="this.select()">
-                <button class="btn btn-small copy-btn" data-text="${markdown.replace(/"/g, '&quot;')}">复制</button>
+                <input type="text" value="${escapeHtml(markdown)}" readonly onclick="this.select()">
+                <button class="btn btn-small pxc-copy-btn" data-clip="${escapeHtml(markdown)}">复制</button>
+              </div>
+              <div class="link-row">
+                <label>CDN加速:</label>
+                <input type="text" value="${escapeHtml(cdnUrl)}" readonly onclick="this.select()">
+                <button class="btn btn-small pxc-copy-btn" data-clip="${escapeHtml(cdnUrl)}">复制</button>
               </div>
             </div>
           </div>
@@ -647,31 +675,34 @@
           <div class="upload-result-item failed">
             <div class="result-header">
               <span class="result-icon">✗</span>
-              <span class="result-filename">${result.filename}</span>
+              <span class="result-filename">${escapeHtml(result.filename)}</span>
             </div>
-            <div class="result-error">失败: ${result.error}</div>
+            <div class="result-error">失败: ${escapeHtml(result.error || '未知错误')}</div>
           </div>
         `;
       }
     }).join('');
     
-    // 绑定复制按钮事件
-    listDiv.querySelectorAll('.copy-btn').forEach(btn => {
+    // 绑定复制按钮（用 pxc-copy-btn class 避免和 [data-copy] 冲突）
+    listDiv.querySelectorAll('.pxc-copy-btn').forEach(btn => {
       btn.addEventListener('click', function() {
-        const text = this.dataset.text;
-        copyToClipboard(text).then(() => {
-          showNotification('已复制到剪贴板');
-        }).catch(() => {
-          showNotification('复制失败', 'error');
-        });
+        const text = this.dataset.clip;
+        if (text !== undefined) {
+          copyToClipboard(text).then(() => {
+            showNotification('已复制到剪贴板');
+          }).catch(() => {
+            showNotification('复制失败', 'error');
+          });
+        }
       });
     });
     
     modal.classList.add('active');
-    
-    // 绑定关闭事件
-    document.getElementById('upload-result-close').onclick = () => modal.classList.remove('active');
-    document.getElementById('upload-result-close-btn').onclick = () => modal.classList.remove('active');
+  }
+
+  // HTML 转义辅助
+  function escapeHtml(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   // 生成文件哈希
