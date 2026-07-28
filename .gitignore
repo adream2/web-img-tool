@@ -2,6 +2,9 @@
 .trae/
 trae-test/
 
+# CodeBuddy
+.codebuddy/
+
 # OS
 .DS_Store
 Thumbs.db
