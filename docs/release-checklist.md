@@ -9,43 +9,23 @@
 
 ## 1. 打包
 
-要求：`manifest.json` 位于 zip **根目录**，不要有一层文件夹。只打扩展运行时需要的文件。
-
-必打：`manifest.json background.js content.js common.js popup.html popup.css popup.js panel.html panel.css picx.html picx.js picx.css picx-panel.js icons/`
-
-不打：`.git/ .workbuddy/ docs/ promo/ assets/ README.md *.md`
-
-**Git Bash / Linux**
+一条命令即可，版本号取自 `manifest.json`：
 
 ```bash
 cd /e/WorkBuddy/web-img-tool
-VERSION=$(node -p "require('./manifest.json').version")
-rm -rf dist && mkdir -p dist
-zip -r "dist/web-image-tool-pro-${VERSION}.zip" \
-  manifest.json background.js content.js common.js \
-  popup.html popup.css popup.js \
-  panel.html panel.css picx.html picx.js picx.css picx-panel.js icons \
-  -x "*.DS_Store"
+bash scripts/package.sh                 # 输出到 dist/
+bash scripts/package.sh ~/Desktop      # 或直接输出到桌面
 ```
 
-**PowerShell**
+脚本会自动自检，任何一项不过就报错退出：
 
-```powershell
-$v = (Get-Content manifest.json -Raw | ConvertFrom-Json).version
-$files = "manifest.json","background.js","content.js","common.js",
-         "popup.html","popup.css","popup.js",
-         "panel.html","panel.css","picx.html","picx.js","picx.css","picx-panel.js","icons"
-New-Item -ItemType Directory -Force dist | Out-Null
-Compress-Archive -Path $files -DestinationPath "dist/web-image-tool-pro-$v.zip" -Force
-```
+- `manifest.json` 在 zip 根目录
+- manifest 引用的文件（background / content / icons）都在包内
+- 不混入 `.git/ docs/ promo/ .workbuddy/ node_modules/`
+- zip 完整性校验（CRC）
+- 打印版本号、文件数、体积与 SHA256
 
-打包后自检：
-
-```bash
-unzip -l dist/web-image-tool-pro-1.2.0.zip | head -5   # 第一层应是 manifest.json
-```
-
-包大小控制在 4 MB 以内（当前代码 + 图标约 100 KB，远低于限制）。
+包体积约 77 KB（上限 100 MB）。只打运行时文件，源码 SVG、文档、落地页都不进包。
 
 ## 2. 素材清单
 
@@ -104,7 +84,7 @@ URL 建议固定，后续不要变（审核记录里会引用）。
 | 权限过度 | 在描述或隐私政策里逐条解释全站权限；不要为省事申请 `history`、`cookies` 等无关权限 |
 | 描述含"最好""第一"等绝对化用语 | 文案里不写排名性表述 |
 | 图标与商店素材分辨率不足 | 用 128/300/440 的原始尺寸，不要放大低清图 |
-| 功能与描述不一致 | 描述里提到的 ZIP、格式转换必须真的能用（v1.2.0 已修） |
+| 功能与描述不一致 | 描述里提到的 ZIP、格式转换必须真的能用（0.1.0 已修） |
 | 首次安装强制跳转/引导页 | 本扩展无首次跳转，保持现状 |
 
 ## 6. 发布后

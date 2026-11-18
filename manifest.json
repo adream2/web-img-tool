@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Web Image Tool Pro",
-  "version": "1.2.0",
+  "version": "0.1.0",
   "description": "一站式图片提取、处理与 GitHub 图床管理工具",
   "permissions": [
     "activeTab",

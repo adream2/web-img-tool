@@ -146,7 +146,8 @@ web-img-tool/
 │   ├── icon.svg           # 图标唯一源文件，改动只改这里
 │   └── icon{16,32,48,128}.png  # 由 scripts/build-assets.sh 生成
 ├── scripts/
-│   └── build-assets.sh    # 从 SVG 生成全部 PNG（扩展图标 + 商店素材）
+│   ├── build-assets.sh    # 从 SVG 生成全部 PNG（扩展图标 + 商店素材）
+│   └── package.sh         # 打包商店用的 zip（自带 manifest/完整性自检）
 ├── docs/                  # 竞品分析、商店文案、隐私政策、上架清单
 └── promo/                 # 落地页与商店素材（store-logo.svg / store-tile.svg）
 ```
