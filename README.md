@@ -5,10 +5,18 @@
 
 > Edge / Chrome / 其他 Chromium 内核浏览器通用 · 免费 · 无需注册
 
-安装方式：Edge 加载项商店搜索「Web Image Tool Pro」，或按下方[手动加载](#安装方法)。
+<!-- [![Edge Add-ons](https://img.shields.io/badge/Edge-加载项商店-667eea)](https://microsoftedge.microsoft.com/addons/detail/bajnpnkinbghodmhdgnjkeoanghfejhp) -->
 
-<!-- TODO: 上架后把这里换成商店链接 -->
-<!-- [![Edge Add-ons](https://img.shields.io/badge/Edge-加载项商店-667eea)](https://microsoftedge.microsoft.com/addons/) -->
+**上架状态**：已提交 Microsoft Edge 加载项商店，审核中（0.1.0，2026-11-18 提交）。
+通过后商店地址即生效，无需再改链接：
+
+```
+https://microsoftedge.microsoft.com/addons/detail/bajnpnkinbghodmhdgnjkeoanghfejhp
+```
+
+审核期间可在 Edge 商店搜索「Web Image Tool Pro」，或按下方[手动加载](#安装方法)先用起来。
+商店标识（门店 ID `0RDCKC9HZ22R`、CRX `Bajnpnkinbghodmhdgnjkeoanghfejhp`）记录在
+[提交记录](docs/store-submission.md)。
 
 ## 文档
 
@@ -17,6 +25,7 @@
 | [竞品与差距分析](docs/feature-gap.md) | 同类开源项目的功能梳理、我们的差距与路线图 |
 | [商店文案](docs/store-listing.md) | Edge 商店的中英双语标题/描述/关键词/权限说明 |
 | [上架清单](docs/release-checklist.md) | 打包命令、素材规格、提交流程、拒审预案 |
+| [提交记录](docs/store-submission.md) | 各版本提交状态、商店 ID / CRX ID、审核期间待办 |
 | [隐私政策](docs/privacy-policy.md) | 可直接部署的隐私政策（[HTML 版](docs/privacy-policy.html)） |
 | [宣传文案](docs/promo-copy.md) | 商店短描述、公众号推文、社媒短文案 |
 | [落地页](promo/landing.html) | 引流页（可直接部署到 ztsite.com） |

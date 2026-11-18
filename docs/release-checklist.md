@@ -62,7 +62,10 @@ bash scripts/package.sh ~/Desktop      # 或直接输出到桌面
 4. 商店一览表：为 `zh-CN` 与 `en-US` 各建一份，粘 `docs/store-listing.md` 对应段落
 5. 上传徽标 / 图块 / 截图
 6. 提交审核 → 通常 **3–7 天**（更新约 1–2 天）
-7. 通过后拿到 `microsoftedge.microsoft.com/addons/detail/...` 链接，回填到落地页与 README
+7. 通过后确认商店页正常，并把状态从「审核中」改为「已上架」
+
+> 0.1.0 已于 2026-11-18 提交，详见 [提交记录](store-submission.md)。CRX ID 在提交时即已确定，
+> 商店详情页 URL 可提前拼出，因此 README 与落地页**无需等审核通过再改**。
 
 ## 4. 隐私政策部署
 
@@ -99,7 +102,9 @@ URL 建议固定，后续不要变（审核记录里会引用）。
 `promo/landing.html` 是自包含单页（无外部 CDN、无外链字体），直接扔到站点即可。
 
 1. 上传到 `https://www.ztsite.com/web-image-tool`（WordPress 用「自定义 HTML」区块嵌入，或直接放静态目录）
-2. **替换 3 处商店链接占位**：搜索 `microsoftedge.microsoft.com/addons/`，换成真实详情页 URL（导航按钮、首屏 CTA、底部 CTA）
+2. **商店链接已填好**：4 处 CTA（导航、首屏、底部、页脚）都指向
+   `https://microsoftedge.microsoft.com/addons/detail/bajnpnkinbghodmhdgnjkeoanghfejhp`，
+   审核通过后才可访问，页面本身可以先上线
 3. **上传二维码**：`promo/assets/gzh1.jpg` 与页面一起上传（相对路径 `assets/gzh1.jpg` 才能正确加载），或改成站点里已有的图片绝对地址
 4. **改隐私政策链接**：`./privacy-policy.html` 换成隐私政策的真实 URL
 5. 标题/描述已经写好（`<title>` 与 `og:*`），若站点有 SEO 插件，注意不要被覆盖
@@ -112,3 +117,14 @@ URL 建议固定，后续不要变（审核记录里会引用）。
 ```
 https://www.ztsite.com/web-image-tool?utm_source=edge&utm_medium=store&utm_campaign=listing
 ```
+
+## 8. 提交记录
+
+每次提交的版本、状态、官方 ID 记在 [store-submission.md](store-submission.md)，
+打开发版前先看一眼「待办」小节，避免漏掉中文 listing 或版本号问题。
+
+关键约束：
+
+- **版本号必须递增**：0.1.0 已占用，下一次至少 `0.1.1`
+- **商店语言**：0.1.0 只提交了 `en-US`，中文文案已在 `store-listing.md`，建议下次更新时补 `zh-CN`
+- **包体一致性**：更新包里的 `manifest.json` 版本必须与提交时填的更新说明一致
