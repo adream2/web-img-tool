@@ -937,3 +937,24 @@ body {
     padding-right: 10px;
   }
 }
+
+/* ===== 检测页筛选工具栏（全屏尺寸更宽松） ===== */
+.filter-input {
+  flex: 1 1 280px;
+}
+
+.filter-select {
+  flex: 0 1 160px;
+}
+
+.size-custom {
+  flex: 0 0 auto;
+}
+
+.zip-toggle {
+  font-size: 13px;
+}
+
+.grid-size {
+  display: inline;
+}

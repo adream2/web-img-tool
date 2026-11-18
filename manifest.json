@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Web Image Tool Pro",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "一站式图片提取、处理与 GitHub 图床管理工具",
   "permissions": [
     "activeTab",
@@ -67,7 +67,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["lib/*", "styles/*", "panel.html", "panel.css", "popup.css", "popup.js", "picx.html", "picx.js", "picx.css", "picx-panel.js"],
+      "resources": ["common.js", "panel.html", "panel.css", "popup.css", "picx.html", "picx.css"],
       "matches": ["<all_urls>"]
     }
   ]

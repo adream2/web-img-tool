@@ -5,6 +5,9 @@ trae-test/
 # CodeBuddy
 .codebuddy/
 
+# WorkBuddy 本地记忆
+.workbuddy/
+
 # OS
 .DS_Store
 Thumbs.db

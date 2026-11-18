@@ -8,11 +8,11 @@
   <link rel="stylesheet" href="panel.css">
   <link rel="stylesheet" href="picx.css">
 </head>
-<body>
+<body class="panel-body">
   <div class="panel-container">
     <header class="panel-header">
       <h1>Web Image Tool Pro</h1>
-      <div class="version">v1.0.0</div>
+      <div class="version">v1.2.0</div>
     </header>
 
     <nav class="tabs">
@@ -42,10 +42,11 @@
           <div class="stat-item">
             <span class="stat-label">检测到图片：</span>
             <span id="image-count" class="stat-value">0</span>
+            <span id="visible-count" class="stat-sub"></span>
           </div>
           <div class="stat-item">
             <label class="checkbox-label">
-              <input type="checkbox" id="include-favicons" checked>
+              <input type="checkbox" id="include-favicons">
               <span>包含图标/Logo</span>
             </label>
           </div>
@@ -57,12 +58,53 @@
           </div>
         </div>
 
+        <div class="filter-bar">
+          <input type="search" id="img-search" class="filter-input" placeholder="搜索 URL / alt / 文件名">
+          <select id="filter-type" class="filter-select">
+            <option value="all">全部类型</option>
+            <option value="image">图片元素</option>
+            <option value="background">背景图</option>
+            <option value="svg">SVG</option>
+            <option value="icon">图标</option>
+          </select>
+          <select id="filter-size" class="filter-select">
+            <option value="0">不限尺寸</option>
+            <option value="100">≥ 100×100</option>
+            <option value="300">≥ 300×300</option>
+            <option value="600">≥ 600×600</option>
+            <option value="1000">宽 ≥ 1000</option>
+            <option value="1920">宽 ≥ 1920</option>
+            <option value="custom">自定义…</option>
+          </select>
+          <span id="size-custom" class="size-custom">
+            <input type="number" id="min-w" class="filter-num" placeholder="宽≥" min="0">
+            <input type="number" id="min-h" class="filter-num" placeholder="高≥" min="0">
+          </span>
+          <select id="sort-by" class="filter-select">
+            <option value="default">默认顺序</option>
+            <option value="width">宽度 ↓</option>
+            <option value="height">高度 ↓</option>
+            <option value="area">面积 ↓</option>
+            <option value="size">文件大小 ↓</option>
+            <option value="type">类型分组</option>
+          </select>
+          <label class="filter-check">
+            <input type="checkbox" id="merge-similar">
+            <span>合并相似图</span>
+          </label>
+        </div>
+
         <div id="image-list" class="image-list panel-image-list">
           <div class="empty-state">点击"扫描页面"检测当前页面的图片</div>
         </div>
 
         <div class="actions">
+          <label class="zip-toggle">
+            <input type="checkbox" id="zip-mode" checked>
+            <span>打包 ZIP</span>
+          </label>
           <button id="select-all-btn" class="btn btn-secondary">全选</button>
+          <button id="copy-links-btn" class="btn btn-secondary">复制链接</button>
           <button id="batch-download-btn" class="btn btn-primary">批量下载</button>
           <button id="batch-upload-btn" class="btn btn-primary" style="background:#2196F3;">批量上传图床</button>
         </div>
@@ -172,6 +214,10 @@
         </div>
 
         <div class="batch-actions">
+          <label class="zip-toggle" style="margin-right:auto;">
+            <input type="checkbox" id="batch-zip" checked>
+            <span>打包为 ZIP</span>
+          </label>
           <button id="batch-convert-btn" class="btn btn-primary btn-large">
             批量转换并下载
           </button>
@@ -335,6 +381,7 @@
           </div>
           <div class="preview-actions">
             <button class="btn btn-primary" id="preview-download">下载</button>
+            <button class="btn btn-secondary" id="preview-copy-url">复制链接</button>
             <button class="btn btn-primary" id="preview-edit" style="background:#4CAF50;">编辑图片</button>
             <button class="btn btn-primary" id="preview-upload-picx" style="background:#2196F3;">上传到图床</button>
             <button class="btn btn-secondary" id="preview-copy-data">复制Data URL</button>
@@ -363,8 +410,9 @@
     </div>
   </div>
 
-  <script src="popup.js"></script>
+  <script src="common.js"></script>
   <script src="picx.js"></script>
+  <script src="popup.js"></script>
   <script src="picx-panel.js"></script>
 </body>
 </html>

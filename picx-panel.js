@@ -654,17 +654,17 @@
             <div class="result-links">
               <div class="link-row">
                 <label>URL:</label>
-                <input type="text" value="${escapeHtml(result.url)}" readonly onclick="this.select()">
+                <input type="text" value="${escapeHtml(result.url)}" readonly>
                 <button class="btn btn-small pxc-copy-btn" data-clip="${escapeHtml(result.url)}">复制</button>
               </div>
               <div class="link-row">
                 <label>Markdown:</label>
-                <input type="text" value="${escapeHtml(markdown)}" readonly onclick="this.select()">
+                <input type="text" value="${escapeHtml(markdown)}" readonly>
                 <button class="btn btn-small pxc-copy-btn" data-clip="${escapeHtml(markdown)}">复制</button>
               </div>
               <div class="link-row">
                 <label>CDN加速:</label>
-                <input type="text" value="${escapeHtml(cdnUrl)}" readonly onclick="this.select()">
+                <input type="text" value="${escapeHtml(cdnUrl)}" readonly>
                 <button class="btn btn-small pxc-copy-btn" data-clip="${escapeHtml(cdnUrl)}">复制</button>
               </div>
             </div>
@@ -683,6 +683,11 @@
       }
     }).join('');
     
+    // 只读框点击全选（内联 onclick 会被 MV3 CSP 拦截）
+    listDiv.querySelectorAll('input[readonly]').forEach(function (input) {
+      input.addEventListener('click', function () { this.select(); });
+    });
+
     // 绑定复制按钮（用 pxc-copy-btn class 避免和 [data-copy] 冲突）
     listDiv.querySelectorAll('.pxc-copy-btn').forEach(btn => {
       btn.addEventListener('click', function() {

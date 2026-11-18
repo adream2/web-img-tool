@@ -1,278 +1,411 @@
 // Background Service Worker for Web Image Tool Pro
-// 核心架构：持续监听所有网络请求，实时捕获图片
+// 职责：网络层图片采集（跨 iframe / 无 DOM 依赖的图片）+ 下载代理 + 右键菜单。
+// 关键点：MV3 的 SW 会在空闲后休眠，内存状态必须落盘（chrome.storage.session），
+// 否则用户打开面板时之前捕获的图片全部丢失 —— 这是"扫描不全"的主因之一。
 
-// 按 tab 存储捕获的图片 URL
-const tabImages = new Map();
+importScripts('common.js');
 
-// 图片 URL 特征匹配
-const IMAGE_EXTENSIONS = /\.(jpg|jpeg|png|gif|bmp|webp|svg|ico|tiff|tif|avif|heic|heif|jxl|j2c|j2k|jp2|jpx|jpm|mj2|apng|wbmp|xbm|pict|pct|pcx|tga|exr|dng|cr2|nef|orf|rw2|arw|sr2|3fr|dcr|erf|kdc|mdc|mef|mos|mrw|nrw|ptx|raf|raw|rwz|srf|x3f|eps|ai|psd|pdf)(\?.*)?$/i;
+const WIT = globalThis.WIT;
 
-// 图片 MIME 类型
-const IMAGE_MIME_TYPES = [
-  'image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/webp',
-  'image/svg+xml', 'image/x-icon', 'image/vnd.microsoft.icon',
-  'image/tiff', 'image/avif', 'image/heic', 'image/heif',
-  'image/apng', 'image/x-xbitmap', 'image/x-pcx', 'image/x-tga',
-  'image/x-portable-pixmap', 'image/x-portable-bitmap',
-  'application/pdf', 'application/postscript'
-];
+// tabId -> Map(url -> {url, type, size, ts})
+const buckets = new Map();
+const flushTimers = new Map();
 
-// 判断 URL 是否可能是图片
-function isImageUrl(url) {
-  if (!url || url.startsWith('data:') || url.startsWith('blob:')) return false;
-  // 排除常见非图片资源
-  if (url.match(/\.(css|js|html|htm|xml|json|woff2?|ttf|otf|eot|map)(\?.*)?$/i)) return false;
-  return IMAGE_EXTENSIONS.test(url.split('?')[0].split('#')[0]);
+const STORAGE_PREFIX = 'tabimgs:';
+const MAX_PER_TAB = 800;
+
+// 只保留浏览器真正会渲染的图片格式，PDF/PSD/AI 之类不再计入（原代码把它们当图片，属于噪音）
+const IMAGE_EXT_RE = /\.(jpe?g|png|gif|bmp|webp|avif|apng|svg|ico|cur|tiff?|heic|heif|jxl)$/i;
+const NON_IMAGE_EXT_RE = /\.(css|js|mjs|html?|xml|json|txt|woff2?|ttf|otf|eot|map|mp4|webm|mp3|wav|pdf)$/i;
+const HTML_MIME_RE = /^(text\/html|application\/xhtml|text\/plain|application\/json|text\/xml)/i;
+
+function isImageMime(contentType) {
+  if (!contentType) return false;
+  if (HTML_MIME_RE.test(contentType)) return false;
+  return /^image\//i.test(contentType);
 }
 
-// 监听所有网络请求（持续运行，从插件安装起就捕获）
+function looksLikeImageUrl(url) {
+  if (!url) return false;
+  const clean = url.split('#')[0].split('?')[0];
+  if (NON_IMAGE_EXT_RE.test(clean)) return false;
+  return IMAGE_EXT_RE.test(clean);
+}
+
+// ---------- 存储层 ----------
+
+function storageKey(tabId) {
+  return STORAGE_PREFIX + tabId;
+}
+
+async function getBucket(tabId) {
+  const cached = buckets.get(tabId);
+  if (cached) return cached;
+
+  const map = new Map();
+  try {
+    const key = storageKey(tabId);
+    const stored = await chrome.storage.session.get(key);
+    const list = stored && stored[key];
+    if (Array.isArray(list)) {
+      list.forEach(function (rec) {
+        if (rec && rec.url) map.set(rec.url, rec);
+      });
+    }
+  } catch (e) {
+    // 会话存储不可用（旧版本浏览器）时退化为纯内存
+  }
+  buckets.set(tabId, map);
+  return map;
+}
+
+function scheduleFlush(tabId) {
+  if (flushTimers.has(tabId)) return;
+  const timer = setTimeout(function () {
+    flushTimers.delete(tabId);
+    const map = buckets.get(tabId);
+    if (!map) return;
+    const key = storageKey(tabId);
+    const payload = {};
+    payload[key] = Array.from(map.values());
+    chrome.storage.session.set(payload).catch(function () {});
+  }, 300);
+  flushTimers.set(tabId, timer);
+}
+
+async function clearBucket(tabId) {
+  buckets.delete(tabId);
+  const timer = flushTimers.get(tabId);
+  if (timer) {
+    clearTimeout(timer);
+    flushTimers.delete(tabId);
+  }
+  try {
+    await chrome.storage.session.remove(storageKey(tabId));
+  } catch (e) { /* ignore */ }
+}
+
+// ---------- 采集 ----------
+
 chrome.webRequest.onHeadersReceived.addListener(
-  (details) => {
+  function (details) {
     const tabId = details.tabId;
     if (tabId < 0) return;
 
     const url = details.url;
-    
-    // 过滤掉插件自身的请求（chrome-extension:// 协议）
-    if (url.startsWith('chrome-extension://')) {
-      return;
-    }
-    
-    // 过滤掉来自插件页面的请求（iframe 中的请求）
-    if (details.initiator && details.initiator.startsWith('chrome-extension://')) {
-      return;
-    }
-    
-    // 过滤掉文档 URL 是插件页面的请求
-    if (details.documentUrl && details.documentUrl.startsWith('chrome-extension://')) {
-      return;
+    if (!/^https?:/i.test(url)) return;                        // 排除 data:/blob:/chrome-extension:
+    if (details.initiator && details.initiator.startsWith('chrome-extension://')) return;
+    if (details.documentUrl && details.documentUrl.startsWith('chrome-extension://')) return;
+
+    const headers = details.responseHeaders || [];
+    let contentType = '';
+    let contentLength = 0;
+    for (let i = 0; i < headers.length; i++) {
+      const name = headers[i].name.toLowerCase();
+      if (name === 'content-type') contentType = String(headers[i].value || '').toLowerCase();
+      else if (name === 'content-length') contentLength = parseInt(headers[i].value, 10) || 0;
     }
 
-    const contentType = details.responseHeaders?.find(
-      h => h.name.toLowerCase() === 'content-type'
-    )?.value?.toLowerCase() || '';
+    if (details.statusCode && details.statusCode >= 400) return;
 
-    let isImage = false;
-
-    if (IMAGE_MIME_TYPES.some(type => contentType.includes(type))) {
-      isImage = true;
-    } else if (isImageUrl(url)) {
-      isImage = true;
+    // 部分 CDN 用 application/octet-stream 返回图片，此时退回扩展名判断
+    let isImage = isImageMime(contentType);
+    if (!isImage && (!contentType || /application\/(octet-stream|binary|unknown)/i.test(contentType))) {
+      isImage = looksLikeImageUrl(url);
     }
+    if (!isImage) return;
 
-    if (isImage) {
-      if (!tabImages.has(tabId)) {
-        tabImages.set(tabId, new Map());
+    getBucket(tabId).then(function (map) {
+      if (map.has(url)) {
+        // 同一 URL 可能被重复请求，补全缺失的元数据即可
+        const rec = map.get(url);
+        if (!rec.size && contentLength) rec.size = contentLength;
+        if (!rec.type && contentType) rec.type = contentType;
+        return;
       }
-      const tabMap = tabImages.get(tabId);
-      if (!tabMap.has(url)) {
-        tabMap.set(url, {
-          url: url,
-          type: contentType || 'unknown',
-          timestamp: Date.now()
-        });
-      }
-    }
+      if (map.size >= MAX_PER_TAB) return;
+      map.set(url, {
+        url: url,
+        type: contentType || '',
+        size: contentLength || 0,
+        ts: Date.now()
+      });
+      scheduleFlush(tabId);
+    });
   },
-  { urls: ['<all_urls>'] },
+  { urls: ['http://*/*', 'https://*/*'] },
   ['responseHeaders']
 );
 
-// 标签页关闭时清理
-chrome.tabs.onRemoved.addListener((tabId) => {
-  tabImages.delete(tabId);
+// 主文档提交（含 SPA 之外的真实跳转）时清空，避免拿到上一个页面的残影
+chrome.webNavigation.onCommitted.addListener(function (details) {
+  if (details.frameId === 0) clearBucket(details.tabId);
 });
 
-// 初始化右键菜单
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({ id: 'copy-base64', title: '复制图片 Base64 编码', contexts: ['image'] });
-  chrome.contextMenus.create({ id: 'copy-data-url', title: '复制图片 Data URL', contexts: ['image'] });
-  chrome.contextMenus.create({ id: 'download-image', title: '下载图片', contexts: ['image'] });
-  chrome.contextMenus.create({ id: 'download-as', title: '图片另存为...', contexts: ['image'] });
+chrome.tabs.onRemoved.addListener(function (tabId) {
+  clearBucket(tabId);
 });
 
-// 点击图标在当前页面打开全屏覆盖面板
-chrome.action.onClicked.addListener((tab) => {
-  // 向当前页面发送消息，让 content script 创建全屏面板
-  chrome.tabs.sendMessage(tab.id, { action: 'toggleOverlayPanel' }).catch(() => {
-    // 如果 content script 未加载，先注入再发送
-    chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      files: ['content.js']
-    }).then(() => {
-      chrome.tabs.sendMessage(tab.id, { action: 'toggleOverlayPanel' });
-    });
+// 单页应用通过 history API 换页时也要清空，否则会混入上一页的图片
+chrome.tabs.onUpdated.addListener(function (tabId, changeInfo) {
+  if (changeInfo && changeInfo.url) clearBucket(tabId);
+});
+
+// ---------- 面板 / 右键菜单 ----------
+
+chrome.runtime.onInstalled.addListener(function () {
+  chrome.contextMenus.removeAll(function () {
+    chrome.contextMenus.create({ id: 'copy-base64', title: '复制图片 Base64 编码', contexts: ['image'] });
+    chrome.contextMenus.create({ id: 'copy-data-url', title: '复制图片 Data URL', contexts: ['image'] });
+    chrome.contextMenus.create({ id: 'download-image', title: '下载图片', contexts: ['image'] });
+    chrome.contextMenus.create({ id: 'download-as', title: '图片另存为...', contexts: ['image'] });
   });
 });
 
-// 处理右键菜单点击
-chrome.contextMenus.onClicked.addListener((info, tab) => {
+// 点击图标：在当前页注入并切换全屏面板
+chrome.action.onClicked.addListener(function (tab) {
+  if (!tab || !tab.id) return;
+  chrome.tabs.sendMessage(tab.id, { action: 'toggleOverlayPanel' }).catch(function () {
+    chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] })
+      .then(function () {
+        return chrome.tabs.sendMessage(tab.id, { action: 'toggleOverlayPanel' });
+      })
+      .catch(function () { /* 受限页面（chrome:// 等）静默失败 */ });
+  });
+});
+
+chrome.contextMenus.onClicked.addListener(function (info, tab) {
+  if (!tab || !tab.id) return;
+  const src = info.srcUrl;
+  if (!src) return;
+
   if (info.menuItemId === 'copy-base64') {
-    handleCopyBase64(info.srcUrl, tab.id);
+    copyImageAs(src, tab.id, false);
   } else if (info.menuItemId === 'copy-data-url') {
-    handleCopyDataUrl(info.srcUrl, tab.id);
+    copyImageAs(src, tab.id, true);
   } else if (info.menuItemId === 'download-image') {
-    handleDownloadImage(info.srcUrl, info.altText);
+    downloadOne(src, info.altText);
   } else if (info.menuItemId === 'download-as') {
-    chrome.tabs.sendMessage(tab.id, { action: 'openDownloadDialog', imageUrl: info.srcUrl, altText: info.altText });
+    // 交给页面做"另存为"更可靠（可拿到 blob/防盗链资源）
+    chrome.tabs.sendMessage(tab.id, {
+      action: 'openDownloadDialog',
+      imageUrl: src,
+      altText: info.altText
+    }).catch(function () { downloadOne(src, info.altText); });
   }
 });
 
-// 处理消息
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'downloadImage') {
-    handleDownloadImage(request.url, request.filename, request.format, request.quality);
-    sendResponse({ success: true });
-  } else if (request.action === 'batchDownload') {
-    handleBatchDownload(request.images);
-    sendResponse({ success: true });
-  } else if (request.action === 'processImage') {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]) {
-        chrome.tabs.sendMessage(tabs[0].id, request, sendResponse);
-      }
-    });
-    return true;
-  } else if (request.action === 'getImages') {
-    // 返回该 tab 已捕获的所有网络图片
-    const tabId = request.tabId;
-    const networkImages = [];
-    if (tabImages.has(tabId)) {
-      const tabMap = tabImages.get(tabId);
-      tabMap.forEach((imgData, url) => {
-        networkImages.push({
-          url: url,
-          type: imgData.type,
-          source: 'network'
-        });
-      });
+chrome.commands.onCommand.addListener(function (command) {
+  chrome.tabs.query({ active: true, currentWindow: true }).then(function (tabs) {
+    const tab = tabs && tabs[0];
+    if (!tab || !tab.id) return;
+    if (command === 'batch-download') {
+      chrome.tabs.sendMessage(tab.id, { action: 'batchDownload' }).catch(function () {});
+    } else if (command === 'copy-base64') {
+      chrome.tabs.sendMessage(tab.id, { action: 'copyHoveredImageBase64' }).catch(function () {});
     }
-    // 同时让 content script 扫描 DOM 补充（内联 SVG、data URL 等）
-    chrome.tabs.sendMessage(tabId, { action: 'getImages' }, (domResponse) => {
-      const domImages = (domResponse && domResponse.images) ? domResponse.images : [];
-      const seenUrls = new Set();
-      const merged = [];
+  });
+});
 
-      networkImages.forEach(img => {
-        if (!seenUrls.has(img.url)) {
-          seenUrls.add(img.url);
-          merged.push(img);
-        }
-      });
+// ---------- 消息 ----------
 
-      domImages.forEach(img => {
-        if (!seenUrls.has(img.url)) {
-          seenUrls.add(img.url);
-          merged.push({ ...img, source: 'dom' });
-        }
-      });
+chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+  const action = request && request.action;
 
-      sendResponse({ images: merged });
+  if (action === 'getImages') {
+    collectImages(request.tabId, !!request.deep)
+      .then(function (images) { sendResponse({ images: images }); })
+      .catch(function (err) { sendResponse({ images: [], error: err.message }); });
+    return true;
+  }
+
+  if (action === 'clearImages') {
+    clearBucket(request.tabId).then(function () { sendResponse({ success: true }); });
+    return true;
+  }
+
+  if (action === 'downloadImage') {
+    downloadOne(request.url, request.filename, !!request.saveAs).then(function (res) {
+      sendResponse(res);
     });
     return true;
   }
 
+  if (action === 'copyImageAs') {
+    const tabId = (sender && sender.tab && sender.tab.id) || request.tabId;
+    if (!tabId) {
+      sendResponse({ success: false, error: 'no tab' });
+      return false;
+    }
+    copyImageAs(request.url, tabId, !!request.asDataUrl).then(function () {
+      sendResponse({ success: true });
+    }, function (err) {
+      sendResponse({ success: false, error: err.message });
+    });
+    return true;
+  }
+
+  if (action === 'batchDownload') {
+    downloadMany(request.images || []).then(function (res) { sendResponse(res); });
+    return true;
+  }
+
+  if (action === 'networkImages') {
+    // 仅返回网络层采集结果（调试用）
+    getBucket(request.tabId).then(function (map) {
+      sendResponse({ images: Array.from(map.values()) });
+    });
+    return true;
+  }
+
+  // 未识别的消息也要回一句，否则调用方会收到 "message port closed"
+  sendResponse({ success: false, error: 'Unknown action: ' + action });
   return false;
 });
 
-// 快捷键处理
-chrome.commands.onCommand.addListener((command) => {
-  if (command === 'batch-download') {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]) chrome.tabs.sendMessage(tabs[0].id, { action: 'batchDownload' });
-    });
-  } else if (command === 'copy-base64') {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]) chrome.tabs.sendMessage(tabs[0].id, { action: 'copyHoveredImageBase64' });
-    });
-  }
-});
+/**
+ * 合并「网络层采集」与「DOM 扫描」结果。
+ * DOM 提供尺寸/alt/元素类型，网络层提供 iframe、CSS 背景等 DOM 拿不到的资源。
+ */
+async function collectImages(tabId, deep) {
+  const map = await getBucket(tabId);
+  const network = Array.from(map.values());
 
-// 下载图片
-async function handleDownloadImage(url, filename, format = null, quality = 0.92) {
+  let domImages = [];
   try {
-    let downloadUrl = url;
-    let finalFilename = filename || 'image';
-
-    if (format && format !== 'original') {
-      const response = await fetch(url);
-      const blob = await response.blob();
-      const processedBlob = await convertImageFormat(blob, format, quality);
-      downloadUrl = URL.createObjectURL(processedBlob);
-      const ext = format === 'jpeg' ? 'jpg' : format;
-      finalFilename = finalFilename.replace(/\.[^/.]+$/, '') + '.' + ext;
-    }
-
-    chrome.downloads.download({ url: downloadUrl, filename: finalFilename, saveAs: false }, () => {
-      if (format && format !== 'original') URL.revokeObjectURL(downloadUrl);
-    });
-  } catch (error) {
-    console.error('Download failed:', error);
-    chrome.downloads.download({ url: url, filename: filename || 'image', saveAs: false });
+    domImages = await requestDomScan(tabId, deep);
+  } catch (e) {
+    domImages = [];
   }
-}
 
-// 批量下载
-async function handleBatchDownload(images) {
-  for (const img of images) {
-    await handleDownloadImage(img.url, img.filename, img.format, img.quality);
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
-}
+  const seen = new Set();
+  const merged = [];
+  const byKey = new Map();   // 避免 O(n²) 的 find
 
-// 格式转换
-async function convertImageFormat(blob, format, quality = 0.92) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      if (format === 'jpeg') {
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
-      ctx.drawImage(img, 0, 0);
-      const mimeType = format === 'jpeg' ? 'image/jpeg' : format === 'png' ? 'image/png' : format === 'webp' ? 'image/webp' : 'image/jpeg';
-      canvas.toBlob((newBlob) => {
-        if (newBlob) resolve(newBlob);
-        else reject(new Error('Conversion failed'));
-      }, mimeType, quality);
+  network.forEach(function (rec) {
+    const key = WIT.normUrl(rec.url);
+    if (seen.has(key)) return;
+    seen.add(key);
+    const entry = {
+      url: rec.url,
+      width: 0,
+      height: 0,
+      size: rec.size || 0,
+      mime: rec.type || '',
+      alt: '',
+      title: '',
+      isBackground: false,
+      type: 'network',
+      source: 'network'
     };
-    img.onerror = () => reject(new Error('Failed to load image'));
-    img.src = URL.createObjectURL(blob);
+    merged.push(entry);
+    byKey.set(key, entry);
+  });
+
+  domImages.forEach(function (img) {
+    const key = WIT.normUrl(img.url);
+    const existing = byKey.get(key);
+    if (existing) {
+      // 用 DOM 的精确信息补全网络记录
+      existing.width = existing.width || img.width || 0;
+      existing.height = existing.height || img.height || 0;
+      existing.alt = img.alt || existing.alt;
+      existing.title = img.title || existing.title;
+      existing.isBackground = img.isBackground || existing.isBackground;
+      existing.type = existing.type === 'network' ? img.type : existing.type;
+      existing.source = 'both';
+      return;
+    }
+    seen.add(key);
+    const entry = {
+      url: img.url,
+      width: img.width || 0,
+      height: img.height || 0,
+      size: img.size || 0,
+      mime: img.mime || '',
+      alt: img.alt || '',
+      title: img.title || '',
+      isBackground: !!img.isBackground,
+      type: img.type || 'img',
+      source: 'dom'
+    };
+    merged.push(entry);
+    byKey.set(key, entry);
+  });
+
+  return merged;
+}
+
+// 向 content script 请求 DOM 扫描；脚本缺失时补注入再试一次
+function requestDomScan(tabId, deep) {
+  const message = { action: 'getImages', deep: !!deep };
+  return chrome.tabs.sendMessage(tabId, message).then(function (resp) {
+    if (!resp || !Array.isArray(resp.images)) throw new Error('empty response');
+    return resp.images;
+  }).catch(function () {
+    return chrome.scripting.executeScript({ target: { tabId: tabId }, files: ['content.js'] })
+      .then(function () {
+        return chrome.tabs.sendMessage(tabId, message);
+      })
+      .then(function (resp) {
+        return (resp && Array.isArray(resp.images)) ? resp.images : [];
+      });
   });
 }
 
-// 复制 Base64
-async function handleCopyBase64(imageUrl, tabId) {
+// ---------- 下载 ----------
+
+async function downloadOne(url, filename, saveAs) {
+  const name = WIT.sanitizeFilename(
+    filename ? WIT.basename(filename) || filename : WIT.basename(url),
+    WIT.guessExt(url)
+  );
+
+  if (!/^(https?|data):/i.test(url)) {
+    // blob: 属于页面进程，SW 无法访问，必须由页面自己下载
+    return { success: false, error: 'UNSUPPORTED_URL' };
+  }
+
   try {
-    const response = await fetch(imageUrl);
-    const blob = await response.blob();
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64 = reader.result.split(',')[1];
-      chrome.tabs.sendMessage(tabId, { action: 'copyToClipboard', text: base64 });
-    };
-    reader.readAsDataURL(blob);
-  } catch (error) {
-    console.error('Failed to copy Base64:', error);
+    const id = await chrome.downloads.download({
+      url: url,
+      filename: name,
+      saveAs: !!saveAs,
+      conflictAction: 'uniquify'
+    });
+    return { success: true, id: id, filename: name };
+  } catch (err) {
+    return { success: false, error: err.message };
   }
 }
 
-// 复制 Data URL
-async function handleCopyDataUrl(imageUrl, tabId) {
+async function downloadMany(images) {
+  let ok = 0;
+  let failed = 0;
+  for (let i = 0; i < images.length; i++) {
+    const item = images[i];
+    const res = await downloadOne(item.url, item.filename);
+    if (res.success) ok++; else failed++;
+    await WIT.sleep(80);
+  }
+  return { success: failed === 0, ok: ok, failed: failed };
+}
+
+// ---------- 复制 ----------
+
+async function copyImageAs(imageUrl, tabId, asDataUrl) {
   try {
-    const response = await fetch(imageUrl);
-    const blob = await response.blob();
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const dataUrl = reader.result;
-      chrome.tabs.sendMessage(tabId, { action: 'copyToClipboard', text: dataUrl });
-    };
-    reader.readAsDataURL(blob);
-  } catch (error) {
-    console.error('Failed to copy Data URL:', error);
+    const blob = await WIT.fetchBlob(imageUrl, 20000);
+    const text = asDataUrl
+      ? await WIT.blobToDataUrl(blob)
+      : await WIT.blobToBase64(blob);
+    await chrome.tabs.sendMessage(tabId, { action: 'copyToClipboard', text: text });
+  } catch (err) {
+    console.error('[WIT] 复制失败:', err);
+    chrome.tabs.sendMessage(tabId, {
+      action: 'showToast',
+      text: '复制失败：' + err.message,
+      type: 'error'
+    }).catch(function () {});
   }
 }

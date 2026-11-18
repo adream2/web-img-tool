@@ -965,3 +965,165 @@ kbd {
 ::-webkit-scrollbar-thumb:hover {
   background: #999;
 }
+
+/* ===== 检测页筛选工具栏 ===== */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0;
+  align-items: center;
+}
+
+.filter-input,
+.filter-select,
+.filter-num {
+  border: 1px solid #e3e6eb;
+  background: #fff;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #333;
+  padding: 6px 8px;
+  outline: none;
+  font-family: inherit;
+  min-width: 0;
+}
+
+.filter-input:focus,
+.filter-select:focus,
+.filter-num:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.12);
+}
+
+.filter-input {
+  flex: 1 1 100%;
+}
+
+.filter-select {
+  flex: 1 1 calc(33.333% - 6px);
+}
+
+.size-custom {
+  display: none;
+  gap: 6px;
+  flex: 1 1 100%;
+}
+
+.filter-num {
+  flex: 1;
+  width: 0;
+}
+
+.stat-sub {
+  font-size: 11px;
+  color: #9aa0a6;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
+.zip-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #666;
+  cursor: pointer;
+  user-select: none;
+  margin-right: auto;
+  white-space: nowrap;
+}
+
+.zip-toggle input {
+  cursor: pointer;
+}
+
+.grid-info {
+  gap: 4px;
+}
+
+.grid-size {
+  font-size: 10px;
+  color: #b0b0b0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.grid-dims {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.batch-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 网格项：复制链接按钮 */
+.grid-copy-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 1px 4px;
+  color: #888;
+  line-height: 1;
+}
+
+.grid-copy-btn:hover {
+  color: #667eea;
+}
+
+.actions {
+  flex-wrap: wrap;
+}
+
+/* 弹窗宽度有限：文件体积让位给尺寸与按钮，体积在预览弹窗里看 */
+body:not(.panel-body) .grid-size {
+  display: none;
+}
+
+/* 筛选栏内联开关 */
+.filter-check {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #666;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+/* 网格项：定位按钮（悬停显现，位于查看按钮左侧） */
+.grid-locate-btn {
+  position: absolute;
+  top: 5px;
+  right: 34px;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  border-radius: 3px;
+  color: #fff;
+  cursor: pointer;
+  padding: 2px 5px;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.grid-thumb-wrap:hover .grid-locate-btn {
+  opacity: 1;
+}
+
+/* 合并相似图后：代表图右下角显示被合并的数量 */
+.dup-badge {
+  left: auto;
+  right: 4px;
+  bottom: 4px;
+  background: rgba(102, 126, 234, 0.9);
+}
