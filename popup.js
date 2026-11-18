@@ -104,6 +104,7 @@
 
     function readFilters() {
       const searchEl = $('img-search');
+      const excludeEl = $('img-exclude');
       const typeEl = $('filter-type');
       const sizeEl = $('filter-size');
       const sortEl = $('sort-by');
@@ -126,6 +127,9 @@
 
       return {
         q: searchEl ? searchEl.value.trim().toLowerCase() : '',
+        exclude: excludeEl
+          ? excludeEl.value.split(/[,，\s]+/).map(function (t) { return t.trim().toLowerCase(); }).filter(Boolean)
+          : [],
         type: typeEl ? typeEl.value : 'all',
         minW: minW,
         minH: minH,
@@ -143,9 +147,14 @@
 
       if (f.type !== 'all' && groupOf(img) !== f.type) return false;
 
-      if (f.q) {
+      if (f.q || (f.exclude && f.exclude.length)) {
         const hay = (img.url + ' ' + (img.alt || '') + ' ' + (img.title || '')).toLowerCase();
-        if (hay.indexOf(f.q) === -1) return false;
+        if (f.q && hay.indexOf(f.q) === -1) return false;
+        if (f.exclude && f.exclude.length) {
+          for (let i = 0; i < f.exclude.length; i++) {
+            if (f.exclude[i] && hay.indexOf(f.exclude[i]) !== -1) return false;
+          }
+        }
       }
 
       if (f.minW || f.minH) {
@@ -564,17 +573,18 @@
       });
     });
 
-    if ($('img-search')) {
-      const search = $('img-search');
+    ['img-search', 'img-exclude'].forEach(function (id) {
+      const input = $(id);
+      if (!input) return;
       let timer = null;
-      search.addEventListener('input', function () {
+      input.addEventListener('input', function () {
         clearTimeout(timer);
         timer = setTimeout(function () {
           applyFilters();
           probeMissingDimensions();
         }, 200);
       });
-    }
+    });
 
     if ($('select-all-btn')) {
       $('select-all-btn').addEventListener('click', function () {
@@ -980,6 +990,19 @@
 
     // ==================== 预览 / 编辑入口 ====================
 
+    // 预览打开时先备好 PNG（剪贴板只认 image/png），点击时立刻写入，避免用户手势过期
+    let previewClipboard = { url: '', blob: null };
+
+    async function prepareClipboardImage(url) {
+      const drawable = await loadDrawable(url);
+      try {
+        const rendered = await renderToBlob(drawable, { format: 'png' });
+        return rendered.blob;
+      } finally {
+        if (drawable && drawable.close) drawable.close();
+      }
+    }
+
     function openPreviewModal(img) {
       const modal = $('preview-modal');
       const previewImg = $('preview-full-image');
@@ -990,6 +1013,32 @@
       $('preview-dims').textContent =
         (img.width ? img.width + ' × ' + img.height + ' px' : '尺寸未知') +
         (img.size ? ' · ' + WIT.formatSize(img.size) : '');
+
+      previewClipboard = { url: img.url, blob: null };
+      prepareClipboardImage(img.url).then(function (png) {
+        if (previewClipboard.url === img.url) previewClipboard.blob = png;
+      }).catch(function () { /* 跨域图片可能失败，点击时会提示 */ });
+
+      const copyImageBtn = $('preview-copy-image');
+      if (copyImageBtn) {
+        copyImageBtn.onclick = function () {
+          if (!previewClipboard.blob || previewClipboard.url !== img.url) {
+            showNotification('图片还在准备，稍后再点一次', 'error');
+            return;
+          }
+          if (!navigator.clipboard || typeof ClipboardItem === 'undefined') {
+            showNotification('当前环境不支持复制图片', 'error');
+            return;
+          }
+          navigator.clipboard.write([new ClipboardItem({ 'image/png': previewClipboard.blob })])
+            .then(function () {
+              showNotification('图片已复制，可直接粘贴');
+            })
+            .catch(function (err) {
+              showNotification('复制失败: ' + err.message, 'error');
+            });
+        };
+      }
 
       $('preview-download').onclick = function () {
         WIT.download(img.url, fileNameFor(img, 0)).then(function () {

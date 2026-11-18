@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>隐私政策 · Web Image Tool Pro</title>
+<meta name="description" content="Web Image Tool Pro 浏览器扩展隐私政策：不收集、不上传任何浏览数据，图片处理全部在本地完成。">
+<style>
+  :root {
+    --ink: #1c1f26;
+    --ink-2: #4a5160;
+    --ink-3: #7c8497;
+    --line: #e8eaf0;
+    --bg: #ffffff;
+    --bg-2: #f7f8fb;
+    --accent: #667eea;
+    --accent-2: #764ba2;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.75 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+          "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 56px 24px 96px; }
+  .back { display: inline-block; margin-bottom: 28px; color: var(--ink-3); text-decoration: none; font-size: 13px; }
+  .back:hover { color: var(--accent); }
+  h1 { font-size: 28px; line-height: 1.3; margin: 0 0 8px; letter-spacing: -0.3px; }
+  .meta { color: var(--ink-3); font-size: 13px; margin-bottom: 32px; }
+  .lead {
+    background: var(--bg-2);
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    margin: 0 0 36px;
+    color: var(--ink-2);
+  }
+  .lead strong { color: var(--ink); }
+  h2 {
+    font-size: 17px;
+    margin: 40px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  p { margin: 10px 0; color: var(--ink-2); }
+  ul { margin: 10px 0; padding-left: 20px; color: var(--ink-2); }
+  li { margin: 4px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13.5px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--ink-3); font-weight: 600; background: var(--bg-2); }
+  code {
+    background: var(--bg-2);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12.5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  a { color: var(--accent); }
+  .foot { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--ink-3); font-size: 12.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="https://www.ztsite.com/">← 返回 ztsite.com</a>
+
+  <h1>Web Image Tool Pro 隐私政策</h1>
+  <p class="meta">最后更新：2026-11-18 · 适用版本：1.2.0 及以上</p>
+
+  <div class="lead">
+    <strong>一句话说明：</strong>本扩展不收集、不上传、不转售任何个人信息或浏览数据。
+    图片的扫描、处理、压缩与格式转换全部在你的浏览器本地完成。
+  </div>
+
+  <h2>1. 我们不收集什么</h2>
+  <ul>
+    <li>不收集浏览历史、访问的网址、页面内容</li>
+    <li>不收集图片内容本身，也不回传任何图片</li>
+    <li>不收集账号、设备标识、位置</li>
+    <li>无统计埋点、无广告 SDK、无第三方分析服务</li>
+    <li>没有服务器，扩展不向开发者回传任何数据</li>
+  </ul>
+
+  <h2>2. 数据在哪里处理</h2>
+  <table>
+    <tr><th>动作</th><th>处理位置</th><th>是否联网</th></tr>
+    <tr><td>扫描页面图片</td><td>你的浏览器内（页面脚本 + Service Worker）</td><td>否</td></tr>
+    <tr><td>尺寸探测、相似图比对</td><td>你的浏览器内（Canvas）</td><td>否</td></tr>
+    <tr><td>裁剪 / 缩放 / 压缩 / 转格式 / 放大</td><td>你的浏览器内（Canvas）</td><td>否</td></tr>
+    <tr><td>下载图片</td><td>你的浏览器下载管理器</td><td>仅请求图片原始地址</td></tr>
+    <tr><td>上传到 GitHub 图床</td><td>你的浏览器 → <code>api.github.com</code></td><td>是（仅当你主动点击上传且已配置）</td></tr>
+    <tr><td>AI 放大</td><td>你的浏览器 → 你填写的接口地址</td><td>是（仅当你主动点击放大且已配置）</td></tr>
+  </table>
+
+  <h2>3. 本地存储的内容</h2>
+  <p>扩展使用浏览器提供的 <code>chrome.storage</code> 保存配置，这些数据留在你的设备上，随浏览器账号同步（若你开启同步）：</p>
+  <table>
+    <tr><th>键</th><th>内容</th><th>位置</th></tr>
+    <tr><td><code>defaultFormat</code> / <code>defaultQuality</code></td><td>默认输出格式与质量</td><td><code>storage.sync</code></td></tr>
+    <tr><td><code>picx*</code></td><td>GitHub 图床配置（你自行填写）</td><td><code>storage.sync</code></td></tr>
+    <tr><td><code>aiUpscale*</code></td><td>第三方 AI 放大接口配置（你自行填写）</td><td><code>storage.sync</code></td></tr>
+    <tr><td><code>wit-scan-cache</code></td><td>最近一次扫描到的图片地址清单，30 分钟自动过期</td><td><code>storage.session</code></td></tr>
+  </table>
+  <p>GitHub Token 与 API Key <strong>只</strong>用于向对应服务发起请求，不经过任何中间服务器，开发者无法获取。</p>
+
+  <h2>4. 权限用途</h2>
+  <table>
+    <tr><th>权限</th><th>用途</th></tr>
+    <tr><td><code>activeTab</code> / <code>tabs</code></td><td>读取当前标签页标识，用于把扫描结果与标签页对应</td></tr>
+    <tr><td>全站访问</td><td>图片可能位于任意网站，需要读取页面中的图片地址与样式信息</td></tr>
+    <tr><td><code>scripting</code></td><td>在用户点击扫描时向当前页注入扫描脚本</td></tr>
+    <tr><td><code>storage</code></td><td>保存你的设置与临时扫描缓存</td></tr>
+    <tr><td><code>downloads</code></td><td>保存你选择下载的图片</td></tr>
+    <tr><td><code>contextMenus</code></td><td>提供图片右键菜单项</td></tr>
+    <tr><td><code>webRequest</code></td><td>被动监听图片响应，补齐页面脚本看不到的图片（不修改、不拦截请求）</td></tr>
+    <tr><td><code>webNavigation</code></td><td>页面跳转时清空上一页缓存，避免混入上一页图片</td></tr>
+  </table>
+  <p>所有权限仅服务于上述功能，不用于任何形式的数据采集。</p>
+
+  <h2>5. 第三方服务</h2>
+  <p>只有在<strong>你主动配置并触发</strong>时，扩展才会与你指定的第三方服务通信：</p>
+  <ul>
+    <li><strong>GitHub</strong>（<code>api.github.com</code>）：上传图片、读取仓库目录。适用 GitHub 隐私声明。</li>
+    <li><strong>AI 放大接口</strong>（地址由你填写）：上送你选择放大的那张图片，返回处理结果。该服务的数据处理行为由其提供方决定，请自行确认其隐私条款。</li>
+  </ul>
+  <p>除上述情况外，扩展不会与任何第三方通信。</p>
+
+  <h2>6. 数据共享与出售</h2>
+  <p>我们不出售、不出租、不共享任何用户数据。没有数据可供共享——扩展不收集数据。</p>
+
+  <h2>7. 数据删除</h2>
+  <ul>
+    <li>卸载扩展：浏览器会删除该扩展的全部本地存储</li>
+    <li>只清配置：在扩展「设置」中清空 GitHub / AI 配置，或在浏览器的扩展存储管理中清除</li>
+    <li>扫描缓存：30 分钟自动过期，关闭浏览器立即清除</li>
+  </ul>
+
+  <h2>8. 儿童隐私</h2>
+  <p>本扩展不面向 13 岁以下儿童设计，也不收集任何年龄相关信息。</p>
+
+  <h2>9. 政策变更</h2>
+  <p>若未来版本引入需要联网的新功能，我们会在本页面更新说明，并在扩展的版本更新说明中注明。继续使用即表示接受更新后的政策。</p>
+
+  <h2>10. 联系方式</h2>
+  <p>网站：<a href="https://www.ztsite.com/">https://www.ztsite.com</a></p>
+  <!-- TODO: 若有专用反馈邮箱，替换下面这行为邮箱，审核通过率更高 -->
+  <p>反馈：<a href="https://www.ztsite.com/">站内留言</a></p>
+
+  <p class="foot">本政策以中文版本为准。Web Image Tool Pro 是免费的开源浏览器扩展，不提供付费服务。</p>
+</div>
+</body>
+</html>

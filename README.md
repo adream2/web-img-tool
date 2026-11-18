@@ -1,6 +1,26 @@
 # Web Image Tool Pro
 
-一站式图片提取、处理与 GitHub 图床管理浏览器扩展。
+一个面板收齐整页图片：**按尺寸筛选、批量下载打包 ZIP、压缩转格式、相似图合并、直传图床**。
+所有处理都在浏览器本地完成，不上传任何数据。
+
+> Edge / Chrome / 其他 Chromium 内核浏览器通用 · 免费 · 无需注册
+
+安装方式：Edge 加载项商店搜索「Web Image Tool Pro」，或按下方[手动加载](#安装方法)。
+
+<!-- TODO: 上架后把这里换成商店链接 -->
+<!-- [![Edge Add-ons](https://img.shields.io/badge/Edge-加载项商店-667eea)](https://microsoftedge.microsoft.com/addons/) -->
+
+## 文档
+
+| 文档 | 内容 |
+|---|---|
+| [竞品与差距分析](docs/feature-gap.md) | 同类开源项目的功能梳理、我们的差距与路线图 |
+| [商店文案](docs/store-listing.md) | Edge 商店的中英双语标题/描述/关键词/权限说明 |
+| [上架清单](docs/release-checklist.md) | 打包命令、素材规格、提交流程、拒审预案 |
+| [隐私政策](docs/privacy-policy.md) | 可直接部署的隐私政策（[HTML 版](docs/privacy-policy.html)） |
+| [宣传文案](docs/promo-copy.md) | 商店短描述、公众号推文、社媒短文案 |
+| [落地页](promo/landing.html) | 引流页（可直接部署到 ztsite.com） |
+| [商店素材](promo/) | 徽标与宣传图 SVG 源文件 |
 
 ## 功能特性
 
@@ -9,10 +29,11 @@
 - **网络监控**：实时捕获页面加载过程中的所有图片请求
 - **完整性**：DOM 扫描 + CSSOM 扫描 + 网络层采集三路合并，覆盖懒加载、`srcset`、Shadow DOM、同源 iframe、`og:image`、CSS 背景/遮罩/边框图
 - **记忆结果**：扫描结果按标签页缓存 30 分钟，关掉面板再打开直接复用，换页或点"重新扫描"才重置
-- **筛选排序**：按尺寸（≥100/300/600/1000/1920 或自定义宽高）、按类型过滤，支持关键词搜索与多种排序
+- **筛选排序**：按尺寸（≥100/300/600/1000/1920 或自定义宽高）、按类型过滤，关键词包含与排除，支持按宽/高/面积/体积排序
 - **按元素定位**：点缩略图上的 🎯 直接在页面上高亮并滚动到对应元素，面板会临时淡出
 - **相似图合并**：dHash 感知哈希聚类，同一张图的缩略图/不同尺寸/webp 版本自动归并，只留最清晰那张
-- **一键复制**：单张复制图片链接、批量复制所选链接（换行分隔），也可复制 Data URL / Base64
+- **一键复制**：单张复制图片链接、批量复制所选链接（换行分隔）、预览里直接复制图片本身；也可复制 Data URL / Base64
+- **排除规则**：关键词排除（如 `avatar,icon,logo`），一眼清掉头像与图标
 - **批量下载**：逐张下载或打包 ZIP 一次搞定（内置 ZIP 写入，无第三方依赖）
 - **去重处理**：自动过滤重复图片
 
@@ -42,6 +63,7 @@
 - **右键菜单**：快速复制 Base64、下载图片
 - **快捷键**：Alt+Shift+I 打开面板，Alt+Shift+D 批量下载
 - **隐私保护**：所有图片处理均在本地完成，不上传用户数据
+- **复制图片**：预览里一键把图片本身放进剪贴板，直接粘到文档/聊天窗口
 
 ## 安装方法
 
@@ -56,11 +78,12 @@
 5. 选择本项目文件夹
 6. 固定插件到工具栏（推荐）
 
-### Firefox 浏览器
+### 其他 Chromium 浏览器
 
-1. 地址栏输入 `about:debugging#/runtime/this-firefox`
-2. 点击"临时载入附加组件"
-3. 选择项目中的 `manifest.json` 文件
+Brave / Vivaldi / 百分 / QQ 浏览器等同样使用 `chrome://extensions` 开发者模式加载。
+
+> Firefox 暂不支持：本项目使用 MV3 的 `background.service_worker` 与 `chrome.*` 命名空间，
+> Firefox 需要 `browser.*` 与事件页适配，未做兼容层。
 
 ## 使用说明
 
@@ -126,8 +149,11 @@ web-img-tool/
 
 - 所有图片处理均在本地浏览器中完成
 - 不会上传任何图片数据到服务器
-- GitHub 图床功能仅在用户主动配置后使用
+- 不收集浏览记录、页面内容或任何个人数据；无统计埋点、无广告
+- 只有你主动配置并触发的功能才会联网：GitHub 图床（`api.github.com`）、第三方 AI 放大接口（你填写的地址）
 - 完全开源，代码可审查
+
+完整条款见 [隐私政策](docs/privacy-policy.md)。
 
 ## 兼容性
 
@@ -146,6 +172,25 @@ web-img-tool/
 本项目使用原生 JavaScript 开发，无需构建工具。
 
 修改代码后，在浏览器扩展管理页面点击刷新按钮即可生效。
+
+## English
+
+**Web Image Tool Pro** is a free browser extension that collects every image on a page and gets
+them out in the format you need — all locally.
+
+- Complete scan: DOM + stylesheets + network traffic, including lazy-loaded images, every `srcset`
+  candidate, Shadow DOM, same-origin iframes, CSS background/mask/border images and `og:image`
+- Filters: min width/height presets or custom, type filter, include/exclude keywords,
+  sort by width / height / area / file size
+- Output: batch download as a single ZIP, or one by one; resize (56 presets), crop, compress,
+  convert JPG/PNG/WebP, upscale, export Base64
+- Perceptual duplicate merge (dHash), click-to-locate the element on the page,
+  optional GitHub image host with Markdown/HTML/CDN links
+- Privacy: no account, no analytics, no ads. Nothing leaves your browser except the requests you
+  explicitly trigger (GitHub API or your own AI endpoint)
+
+Works in Microsoft Edge, Chrome and other Chromium browsers.
+Docs: [feature gap analysis](docs/feature-gap.md) · [store listing](docs/store-listing.md) · [privacy](docs/privacy-policy.md)
 
 ## 许可证
 
@@ -182,5 +227,8 @@ MIT License
 ## 致谢
 
 感谢所有开源项目的启发，特别是：
-- PicX 图床工具的设计理念
+- [PicX](https://github.com/XPoet/picx) 图床工具的设计理念
+- [Image Downloader](https://github.com/jsxiao/image-downloader)（PactInteractive 原版）在筛选与命名上的思路
+- [Picviewer CE+](https://github.com/hoothin/UserScripts) 的图库与规则系统
+- [Image Max URL](https://github.com/qsniyg/maxurl) 对"原图解析"的实践
 - 各种 CDN 加速服务的支持

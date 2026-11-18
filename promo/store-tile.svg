@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="440" height="280" viewBox="0 0 440 280">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="440" y2="280" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5f74e6"/>
+      <stop offset="1" stop-color="#7a4a9e"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".96"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity=".82"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="440" height="280" fill="url(#bg)"/>
+  <g opacity=".12" stroke="#ffffff" stroke-width="1">
+    <path d="M-40 220 L120 60"/><path d="M-10 260 L150 100"/><path d="M20 300 L180 140"/>
+    <path d="M300 300 L460 140"/><path d="M340 300 L500 140"/>
+  </g>
+
+  <!-- 图标块 -->
+  <g transform="translate(40,88)">
+    <rect width="104" height="104" rx="24" fill="#ffffff" fill-opacity=".16"/>
+    <rect x="22" y="30" width="60" height="44" rx="8"
+          fill="none" stroke="url(#mark)" stroke-width="6"/>
+    <circle cx="40" cy="46" r="6" fill="#ffffff" fill-opacity=".92"/>
+    <path d="M26 70 L44 52 L56 64 L66 55 L80 70"
+          fill="none" stroke="#ffffff" stroke-width="6"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <text x="168" y="118" fill="#ffffff" font-family="'PingFang SC','Microsoft YaHei',system-ui,sans-serif"
+        font-size="30" font-weight="700" letter-spacing="-0.5">Web Image Tool Pro</text>
+  <text x="168" y="152" fill="#ffffff" fill-opacity=".82"
+        font-family="'PingFang SC','Microsoft YaHei',system-ui,sans-serif" font-size="15">
+        网页图片提取 · 批量下载 · 本地处理
+  </text>
+
+  <g transform="translate(168,182)">
+    <rect width="112" height="30" rx="15" fill="#ffffff" fill-opacity=".18"/>
+    <text x="56" y="20" text-anchor="middle" fill="#ffffff"
+          font-family="'PingFang SC','Microsoft YaHei',system-ui,sans-serif" font-size="13">ZIP · 转格式 · 图床</text>
+  </g>
+</svg>

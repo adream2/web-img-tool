@@ -60,6 +60,7 @@
 
         <div class="filter-bar">
           <input type="search" id="img-search" class="filter-input" placeholder="搜索 URL / alt / 文件名">
+          <input type="search" id="img-exclude" class="filter-input" placeholder="排除：关键词用逗号分隔，如 avatar,icon,logo">
           <select id="filter-type" class="filter-select">
             <option value="all">全部类型</option>
             <option value="image">图片元素</option>
@@ -382,6 +383,7 @@
           <div class="preview-actions">
             <button class="btn btn-primary" id="preview-download">下载</button>
             <button class="btn btn-secondary" id="preview-copy-url">复制链接</button>
+            <button class="btn btn-secondary" id="preview-copy-image">复制图片</button>
             <button class="btn btn-primary" id="preview-edit" style="background:#4CAF50;">编辑图片</button>
             <button class="btn btn-primary" id="preview-upload-picx" style="background:#2196F3;">上传到图床</button>
             <button class="btn btn-secondary" id="preview-copy-data">复制Data URL</button>
