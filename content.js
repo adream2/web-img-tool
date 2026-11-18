@@ -74,11 +74,14 @@ if (!window.__webImgToolInjected) {
 
     // ---------- 收集器 ----------
 
+    const MAX_ENTRIES = 3000;     // 上限保护：极端页面（图标字体/精灵图）不要撑爆内存
+
     function createCollector() {
       const map = new Map();
       const elements = new Map();   // url -> 真实 DOM 元素，供"在页面中定位"使用
 
       function add(rawUrl, meta) {
+        if (map.size >= MAX_ENTRIES) return;
         const url = absolute(rawUrl);
         if (!isUsable(url)) return;
 
@@ -299,6 +302,7 @@ if (!window.__webImgToolInjected) {
 
     function walkRules(rules, collector) {
       for (let i = 0; i < rules.length; i++) {
+        if (collector.map.size >= MAX_ENTRIES) return;
         const rule = rules[i];
         if (rule.cssRules) {
           walkRules(rule.cssRules, collector);
@@ -398,11 +402,23 @@ if (!window.__webImgToolInjected) {
       return true;
     }
 
+    function findElement(url) {
+      const direct = elementIndex.get(url);
+      if (direct && direct.isConnected) return direct;
+
+      // 面板里的 URL 可能来自网络层（无 hash）或 DOM（带 hash），做一次规范化兜底
+      const key = url.split('#')[0];
+      for (const entry of elementIndex) {
+        if (entry[0].split('#')[0] === key && entry[1].isConnected) return entry[1];
+      }
+      return null;
+    }
+
     function locateImage(url) {
-      let el = elementIndex.get(url);
-      if (!el || !el.isConnected) {
+      let el = findElement(url);
+      if (!el) {
         detectImages();            // 页面可能已变化，重建索引
-        el = elementIndex.get(url);
+        el = findElement(url);
       }
       if (!el) return { found: false };
 
@@ -469,7 +485,7 @@ if (!window.__webImgToolInjected) {
         'background:' + (type === 'error' ? '#f44336' : '#4CAF50') + ';color:#fff;' +
         'border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.2);z-index:2147483647;' +
         'font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;';
-      document.body.appendChild(el);
+      (document.body || document.documentElement).appendChild(el);
       setTimeout(function () {
         el.style.transition = 'opacity .3s';
         el.style.opacity = '0';
@@ -518,7 +534,7 @@ if (!window.__webImgToolInjected) {
       };
       document.addEventListener('keydown', escHandler);
 
-      document.body.appendChild(overlayPanel);
+      (document.body || document.documentElement).appendChild(overlayPanel);
     }
 
     // ---------- 消息 ----------
@@ -545,7 +561,11 @@ if (!window.__webImgToolInjected) {
           });
           return true;
         }
-        sendResponse({ images: detectImages() });
+        try {
+          sendResponse({ images: detectImages() });
+        } catch (err) {
+          sendResponse({ images: [], error: err.message || 'scan failed' });
+        }
         return false;
       }
 

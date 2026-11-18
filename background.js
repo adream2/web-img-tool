@@ -38,25 +38,29 @@ function storageKey(tabId) {
   return STORAGE_PREFIX + tabId;
 }
 
-async function getBucket(tabId) {
+function getBucket(tabId) {
   const cached = buckets.get(tabId);
-  if (cached) return cached;
+  if (cached) return Promise.resolve(cached);
 
+  // 先同步占位、再异步回填：图片响应是并发到达的，若等 await 之后才写入 buckets，
+  // 同一 tab 的多条并发请求会各自 new 一个 Map，前面的采集结果会被覆盖丢失。
   const map = new Map();
-  try {
-    const key = storageKey(tabId);
-    const stored = await chrome.storage.session.get(key);
-    const list = stored && stored[key];
-    if (Array.isArray(list)) {
-      list.forEach(function (rec) {
-        if (rec && rec.url) map.set(rec.url, rec);
-      });
-    }
-  } catch (e) {
-    // 会话存储不可用（旧版本浏览器）时退化为纯内存
-  }
   buckets.set(tabId, map);
-  return map;
+
+  const key = storageKey(tabId);
+  const loading = (chrome.storage.session && chrome.storage.session.get)
+    ? chrome.storage.session.get(key).then(function (stored) {
+        const list = stored && stored[key];
+        if (Array.isArray(list)) {
+          list.forEach(function (rec) {
+            if (rec && rec.url && !map.has(rec.url)) map.set(rec.url, rec);
+          });
+        }
+      })
+    : Promise.resolve();
+
+  // 会话存储不可用（旧版本浏览器）时退化为纯内存
+  return loading.catch(function () {}).then(function () { return map; });
 }
 
 function scheduleFlush(tabId) {
@@ -69,7 +73,7 @@ function scheduleFlush(tabId) {
     const payload = {};
     payload[key] = Array.from(map.values());
     chrome.storage.session.set(payload).catch(function () {});
-  }, 300);
+  }, 150);
   flushTimers.set(tabId, timer);
 }
 

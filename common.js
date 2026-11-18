@@ -80,6 +80,10 @@
       s = s.slice(0, 100 - ext.length) + ext;
     }
     if (!s) s = 'image';
+    // Windows 保留设备名会导致 FILE_NAME_INVALID
+    if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.[^.]*)?$/i.test(s)) {
+      s = '_' + s;
+    }
     if (!/\.[a-z0-9]{2,5}$/i.test(s)) {
       const ext = (fallbackExt || 'jpg').replace(/^\./, '');
       s += '.' + ext;
@@ -185,7 +189,6 @@
         finish(null);
       };
       img.decoding = 'async';
-      img.referrerPolicy = 'no-referrer';
       img.src = url;
     });
 
@@ -430,7 +433,11 @@
     let blob;
     try {
       blob = await fetchBlob(url, 30000);
+      if (/^text\/html/i.test(blob.type || '')) throw new Error('HOTLINK_BLOCKED');
     } catch (fetchError) {
+      if (fetchError.message === 'HOTLINK_BLOCKED') {
+        throw new Error('服务器返回的是网页而不是图片（多半是防盗链）');
+      }
       if (/^data:/i.test(url)) throw fetchError;
       // 抓不到就退回直链，让下载器自己带 cookie 去请求
       return downloadBlobUrl(url, name, opts);

@@ -222,6 +222,14 @@
       }
       const rescan = $('rescan-btn');
       if (rescan) rescan.style.display = G.raw.length ? 'inline-block' : 'none';
+
+      const selAll = $('select-all-btn');
+      if (selAll) {
+        const allSelected = G.view.length > 0 && G.view.every(function (img) {
+          return G.selected.has(img.url);
+        });
+        selAll.textContent = allSelected ? '取消全选' : '全选';
+      }
     }
 
     function typeBadge(img) {
@@ -238,10 +246,12 @@
 
       if (!G.raw.length) {
         list.innerHTML = '<div class="empty-state">点击"扫描页面"检测当前页面的图片</div>';
+        G.dimsNodes = new Map();
         return;
       }
       if (!G.view.length) {
         list.innerHTML = '<div class="empty-state">没有符合筛选条件的图片</div>';
+        G.dimsNodes = new Map();
         return;
       }
 
@@ -588,7 +598,8 @@
 
     if ($('select-all-btn')) {
       $('select-all-btn').addEventListener('click', function () {
-        const all = G.view.length > 0 && G.view.every(function (img) { return G.selected.has(img.url); });
+        if (!G.view.length) return;
+        const all = G.view.every(function (img) { return G.selected.has(img.url); });
         if (all) {
           G.view.forEach(function (img) { G.selected.delete(img.url); });
         } else {
@@ -679,6 +690,19 @@
       });
     }
 
+    // 已勾选就按"勾选"算：即使被当前筛选隐藏，也照样参与批量操作
+    function selectedItems() {
+      return G.raw.filter(function (img) { return G.selected.has(img.url); });
+    }
+
+    function hiddenSelectedCount(items) {
+      let n = 0;
+      items.forEach(function (img) {
+        if (G.view.indexOf(img) === -1) n++;
+      });
+      return n;
+    }
+
     function toggleSelected(item, url, checked) {
       if (checked) G.selected.add(url); else G.selected.delete(url);
       if (item) item.classList.toggle('selected', checked);
@@ -691,10 +715,14 @@
     // ---- 批量下载 ----
     if ($('batch-download-btn')) {
       $('batch-download-btn').addEventListener('click', async function () {
-        const items = G.view.filter(function (img) { return G.selected.has(img.url); });
+        const items = selectedItems();
         if (!items.length) {
           showNotification('请先勾选要下载的图片', 'error');
           return;
+        }
+        const hidden = hiddenSelectedCount(items);
+        if (hidden) {
+          showNotification('已选 ' + items.length + ' 张，其中 ' + hidden + ' 张被当前筛选隐藏，仍会一起下载');
         }
 
         const btn = this;
@@ -717,6 +745,7 @@
     async function downloadIndividually(items, btn) {
       let ok = 0;
       let failed = 0;
+      let firstError = '';
       const used = new Set();
 
       for (let i = 0; i < items.length; i++) {
@@ -728,10 +757,16 @@
           ok++;
         } catch (err) {
           failed++;
+          if (!firstError) firstError = err.message;
         }
         await WIT.sleep(120);
       }
-      showNotification('下载完成：成功 ' + ok + ' 张' + (failed ? '，失败 ' + failed + ' 张' : ''), failed ? 'error' : 'success');
+
+      showNotification(
+        '下载完成：成功 ' + ok + ' 张' +
+        (failed ? '，失败 ' + failed + ' 张（' + (firstError || '原因未知') + '）' : ''),
+        failed ? 'error' : 'success'
+      );
     }
 
     async function downloadAsZip(items, btn) {
@@ -754,7 +789,9 @@
       const failed = entries.length - good.length;
 
       if (!good.length) {
-        showNotification('全部图片获取失败，可能是防盗链限制', 'error');
+        const firstErr = entries.filter(function (e) { return e && e.__error; })[0];
+        showNotification('全部图片获取失败' +
+          (firstErr ? '：' + firstErr.__error.message : '，可能是防盗链限制'), 'error');
         return;
       }
 
@@ -777,7 +814,7 @@
     // ---- 批量上传图床 ----
     if ($('batch-upload-btn')) {
       $('batch-upload-btn').addEventListener('click', function () {
-        const items = G.view.filter(function (img) { return G.selected.has(img.url); });
+        const items = selectedItems();
         if (!items.length) {
           showNotification('请先勾选要上传的图片', 'error');
           return;
@@ -1015,9 +1052,12 @@
         (img.size ? ' · ' + WIT.formatSize(img.size) : '');
 
       previewClipboard = { url: img.url, blob: null };
-      prepareClipboardImage(img.url).then(function (png) {
-        if (previewClipboard.url === img.url) previewClipboard.blob = png;
-      }).catch(function () { /* 跨域图片可能失败，点击时会提示 */ });
+      clearTimeout(G.clipTimer);
+      G.clipTimer = setTimeout(function () {
+        prepareClipboardImage(img.url).then(function (png) {
+          if (previewClipboard.url === img.url) previewClipboard.blob = png;
+        }).catch(function () { /* 跨域图片可能失败，点击时会提示 */ });
+      }, 700);
 
       const copyImageBtn = $('preview-copy-image');
       if (copyImageBtn) {
@@ -1723,19 +1763,18 @@
         const btn = this;
 
         // 已勾选的优先；否则处理全部扫描结果
-        let source = G.raw;
-        if (G.selected.size) {
-          source = G.raw.filter(function (img) { return G.selected.has(img.url); });
-        }
+        let source = G.selected.size ? selectedItems() : G.raw;
         if (!source.length) {
           // 还没扫描过就先扫一次
           await scan(false);
-          source = G.selected.size
-            ? G.raw.filter(function (img) { return G.selected.has(img.url); })
-            : G.raw;
+          source = G.selected.size ? selectedItems() : G.raw;
         }
         if (!source.length) {
           showNotification('未检测到图片', 'error');
+          return;
+        }
+        if (source.length > 300) {
+          showNotification('一次最多处理 300 张（当前 ' + source.length + ' 张），请先用筛选缩小范围', 'error');
           return;
         }
 
@@ -1747,6 +1786,7 @@
 
         btn.disabled = true;
         let done = 0;
+        let keptAnimated = 0;
         const used = new Set();
 
         const results = await WIT.pool(source, 3, async function (img, idx) {
@@ -1757,7 +1797,12 @@
             let outBlob = blob;
             let ext = WIT.guessExt(img.url, blob.type);
 
-            if (needRender) {
+            // GIF/APNG 走 canvas 会丢帧，保持原格式时原样透传
+            const animated = /^image\/(gif|apng)$/i.test(blob.type || '');
+            const keepAnimated = animated && format === 'original';
+            if (keepAnimated) keptAnimated++;
+
+            if (needRender && !keepAnimated) {
               const objectUrl = URL.createObjectURL(blob);
               try {
                 const el = await loadDrawable(objectUrl);
@@ -1809,7 +1854,12 @@
               await WIT.sleep(100);
             }
           }
-          showNotification('完成：成功 ' + good.length + ' 张' + (failed ? '，失败 ' + failed + ' 张' : ''), failed ? 'error' : 'success');
+          showNotification(
+            '完成：成功 ' + good.length + ' 张' +
+            (failed ? '，失败 ' + failed + ' 张' : '') +
+            (keptAnimated ? '，' + keptAnimated + ' 张动图保持原样' : ''),
+            failed ? 'error' : 'success'
+          );
         } catch (err) {
           showNotification('导出失败: ' + err.message, 'error');
         } finally {
@@ -1890,7 +1940,12 @@
 
         const payload = {};
         payload[row[1]] = value;
-        chrome.storage.sync.set(payload);
+        const write = chrome.storage.sync.set(payload);
+        if (write && typeof write.catch === 'function') {
+          write.catch(function () {
+            showNotification('设置保存失败（同步配额已满？）', 'error');
+          });
+        }
 
         if (row[0] === 'picx-cdn-type') {
           const group = $('picx-custom-cdn-group');

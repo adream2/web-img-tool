@@ -160,19 +160,49 @@ class PicXManager {
 
       // 上传到 GitHub
       const url = this.buildApiUrl(fullPath);
-      const response = await fetch(url, {
+      const body = {
+        message: options.message || 'Upload image',
+        content: content,
+        branch: this.branch
+      };
+
+      let response = await fetch(url, {
         method: 'PUT',
         headers: this.getHeaders(),
-        body: JSON.stringify({
-          message: options.message || 'Upload image',
-          content: content,
-          branch: this.branch
-        })
+        body: JSON.stringify(body)
       });
 
+      // 同名文件已存在时 GitHub 返回 422（缺少 sha）。取回 sha 后覆盖，而不是让用户看报错
+      if (response.status === 422 || response.status === 409) {
+        let exists = false;
+        try {
+          const probe = await fetch(url, { headers: this.getHeaders() });
+          if (probe.ok) {
+            const info = await probe.json();
+            if (info && info.sha) {
+              body.sha = info.sha;
+              body.message = options.message || 'Overwrite image';
+              exists = true;
+            }
+          }
+        } catch (e) { /* 取不到 sha 就走下面的报错 */ }
+
+        if (exists) {
+          response = await fetch(url, {
+            method: 'PUT',
+            headers: this.getHeaders(),
+            body: JSON.stringify(body)
+          });
+        }
+      }
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `上传失败: ${response.status}`);
+        let detail = '';
+        try {
+          const errorData = await response.json();
+          detail = errorData && errorData.message ? errorData.message : '';
+        } catch (e) { /* 非 JSON 响应 */ }
+        throw new Error(detail || `上传失败: ${response.status}`);
       }
 
       const result = await response.json();

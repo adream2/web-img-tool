@@ -67,7 +67,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["common.js", "panel.html", "panel.css", "popup.css", "picx.html", "picx.css"],
+      "resources": ["common.js", "panel.html", "panel.css", "popup.css", "popup.js", "picx.html", "picx.css", "picx.js", "picx-panel.js"],
       "matches": ["<all_urls>"]
     }
   ]
