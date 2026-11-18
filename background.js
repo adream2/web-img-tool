@@ -10,6 +10,7 @@ const WIT = globalThis.WIT;
 // tabId -> Map(url -> {url, type, size, ts})
 const buckets = new Map();
 const flushTimers = new Map();
+const loadingBuckets = new Set();   // 正在从 storage.session 恢复的 tab
 
 const STORAGE_PREFIX = 'tabimgs:';
 const MAX_PER_TAB = 800;
@@ -48,6 +49,7 @@ function getBucket(tabId) {
   buckets.set(tabId, map);
 
   const key = storageKey(tabId);
+  loadingBuckets.add(tabId);
   const loading = (chrome.storage.session && chrome.storage.session.get)
     ? chrome.storage.session.get(key).then(function (stored) {
         const list = stored && stored[key];
@@ -60,7 +62,10 @@ function getBucket(tabId) {
     : Promise.resolve();
 
   // 会话存储不可用（旧版本浏览器）时退化为纯内存
-  return loading.catch(function () {}).then(function () { return map; });
+  return loading.catch(function () {}).then(function () {
+    loadingBuckets.delete(tabId);
+    return map;
+  });
 }
 
 function scheduleFlush(tabId) {
@@ -69,6 +74,11 @@ function scheduleFlush(tabId) {
     flushTimers.delete(tabId);
     const map = buckets.get(tabId);
     if (!map) return;
+    // 恢复尚未完成时先别写，否则会用"只有新记录"的列表覆盖掉上次的完整列表
+    if (loadingBuckets.has(tabId)) {
+      scheduleFlush(tabId);
+      return;
+    }
     const key = storageKey(tabId);
     const payload = {};
     payload[key] = Array.from(map.values());
@@ -79,6 +89,7 @@ function scheduleFlush(tabId) {
 
 async function clearBucket(tabId) {
   buckets.delete(tabId);
+  loadingBuckets.delete(tabId);
   const timer = flushTimers.get(tabId);
   if (timer) {
     clearTimeout(timer);
