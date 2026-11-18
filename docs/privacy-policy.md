@@ -91,3 +91,104 @@ GitHub Token 与 API Key **只**用于向对应服务发起请求，不经过任
 ---
 
 *本政策以中文版本为准。*
+
+---
+
+# English
+
+**Web Image Tool Pro — Privacy Policy**
+
+Last updated: 2026-11-18 · Applies to version 0.1.0 and later
+
+## In one sentence
+
+This extension **does not collect, upload or sell** any personal information or browsing data.
+Scanning, processing, compression and format conversion all happen locally in your browser.
+
+## 1. What we do not collect
+
+- No browsing history, visited URLs or page content
+- No image content, and no image is ever sent back to us
+- No account, device identifier or location
+- No analytics, no advertising SDK, no third-party analytics service
+- There is no backend server; the extension sends no data to the developer
+
+## 2. Where data is processed
+
+| Action | Where | Network |
+|---|---|---|
+| Scanning page images | In your browser (page script + service worker) | No |
+| Size probing, duplicate comparison | In your browser (Canvas) | No |
+| Crop / resize / compress / convert / upscale | In your browser (Canvas) | No |
+| Downloading an image | Your browser's download manager | Only requests the image's own URL |
+| Uploading to a GitHub image host | Your browser → `api.github.com` | Yes (only when you click upload and have configured it) |
+| AI upscale | Your browser → the endpoint you entered | Yes (only when you click upscale and have configured it) |
+
+## 3. What is stored locally
+
+The extension uses the browser's `chrome.storage` API. Data stays on your device and syncs with
+your browser profile if you have sync enabled.
+
+| Key | Content | Area |
+|---|---|---|
+| `defaultFormat` / `defaultQuality` | Default output format and quality | `storage.sync` |
+| `picxToken` / `picxOwner` / `picxRepo` / `picxBranch` / `picxCdnType` / `picxCustomCdn` | GitHub image host settings you entered | `storage.sync` |
+| `aiUpscaleApiKey` / `aiUpscaleEndpoint` / `aiUpscaleProvider` | Third-party AI upscale settings you entered | `storage.sync` |
+| `wit-scan-cache` | Image URLs from the most recent scan, expires after 30 minutes | `storage.session` (cleared when the browser closes) |
+
+Your GitHub token and API key are used **only** to call the corresponding service directly.
+They never pass through an intermediary, and the developer cannot read them.
+
+## 4. Why each permission is needed
+
+| Permission | Purpose |
+|---|---|
+| `activeTab` / `tabs` | Read the current tab id so a scan result can be tied to that tab |
+| Host access (`<all_urls>`) | Images can live on any website; the extension needs to read image URLs and page styles |
+| `scripting` | Inject the scanner into the current page when the user clicks scan |
+| `storage` | Save your settings and the short-lived scan cache |
+| `downloads` | Save images you chose to download |
+| `contextMenus` | Provide image right-click menu items |
+| `webRequest` | Passively observe image responses the page script cannot see (never modifies or blocks requests) |
+| `webNavigation` | Clear the previous page's cache on navigation so images are not mixed up |
+
+Permissions serve the features above and nothing else.
+
+## 5. Third-party services
+
+The extension contacts a third party **only when you configure it and explicitly trigger it**:
+
+- **GitHub** (`api.github.com`) — upload images, read repository directories. GitHub's own privacy
+  statement applies.
+- **AI upscale endpoint** (address entered by you) — sends the single image you chose to upscale and
+  returns the result. That provider's data handling is governed by its own terms.
+
+Outside those cases the extension communicates with no third party.
+
+## 6. Sharing and selling
+
+We do not sell, rent or share user data. There is no data to share — the extension collects none.
+
+## 7. Deleting your data
+
+- Uninstalling the extension removes all of its local storage
+- To clear settings only, empty the GitHub / AI fields in the extension's Settings
+- The scan cache expires after 30 minutes and is cleared when the browser closes
+
+## 8. Children's privacy
+
+The extension is not directed to children under 13 and collects no age-related information.
+
+## 9. Changes
+
+If a future version adds a feature that requires network access, this page and the release notes
+will be updated. Continued use means you accept the updated policy.
+
+## 10. Contact
+
+- Website: https://www.ztsite.com
+- Feedback: https://www.ztsite.com (site contact form)
+
+---
+
+*The Chinese version is the authoritative one.*

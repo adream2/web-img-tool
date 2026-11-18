@@ -67,6 +67,7 @@
   <a class="back" href="https://www.ztsite.com/">← 返回 ztsite.com</a>
 
   <h1>Web Image Tool Pro 隐私政策</h1>
+  <p class="meta">English version below · <a href="#en">↓ Jump to English</a></p>
   <p class="meta">最后更新：2026-11-18 · 适用版本：0.1.0 及以上</p>
 
   <div class="lead">
@@ -148,7 +149,94 @@
   <!-- TODO: 若有专用反馈邮箱，替换下面这行为邮箱，审核通过率更高 -->
   <p>反馈：<a href="https://www.ztsite.com/">站内留言</a></p>
 
-  <p class="foot">本政策以中文版本为准。Web Image Tool Pro 是免费的开源浏览器扩展，不提供付费服务。</p>
+
+  <h1 id="en" style="margin-top:72px;padding-top:36px;border-top:1px solid var(--line);">
+    Privacy Policy <span style="font-size:16px;color:var(--ink-3);font-weight:400;">(English)</span>
+  </h1>
+  <p class="meta">Last updated: 2026-11-18 · Applies to version 0.1.0 and later</p>
+
+  <div class="lead">
+    <strong>In one sentence:</strong> this extension does not collect, upload or sell any personal
+    information or browsing data. Scanning, processing, compression and format conversion all happen
+    locally in your browser.
+  </div>
+
+  <h2>1. What we do not collect</h2>
+  <ul>
+    <li>No browsing history, visited URLs or page content</li>
+    <li>No image content, and no image is ever sent back to us</li>
+    <li>No account, device identifier or location</li>
+    <li>No analytics, no advertising SDK, no third-party analytics service</li>
+    <li>No backend server; the extension sends no data to the developer</li>
+  </ul>
+
+  <h2>2. Where data is processed</h2>
+  <table>
+    <thead><tr><th>Action</th><th>Where</th><th>Network</th></tr></thead>
+    <tbody>
+      <tr><td>Scanning page images</td><td>In your browser</td><td>No</td></tr>
+      <tr><td>Size probing, duplicate comparison</td><td>In your browser (Canvas)</td><td>No</td></tr>
+      <tr><td>Crop / resize / compress / convert / upscale</td><td>In your browser (Canvas)</td><td>No</td></tr>
+      <tr><td>Downloading an image</td><td>Your browser's download manager</td><td>Requests the image URL only</td></tr>
+      <tr><td>Uploading to a GitHub image host</td><td>Your browser → <code>api.github.com</code></td><td>Only when you click upload</td></tr>
+      <tr><td>AI upscale</td><td>Your browser → the endpoint you entered</td><td>Only when you click upscale</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3. What is stored locally</h2>
+  <p>Settings live in the browser's <code>chrome.storage</code> and stay on your device:</p>
+  <ul>
+    <li><code>defaultFormat</code> / <code>defaultQuality</code> — default output format and quality</li>
+    <li><code>picx*</code> — GitHub image host settings you entered</li>
+    <li><code>aiUpscale*</code> — third-party AI upscale settings you entered</li>
+    <li><code>wit-scan-cache</code> — image URLs from the latest scan, expires after 30 minutes (session storage)</li>
+  </ul>
+  <p>Your GitHub token and API key are used only to call the corresponding service directly.
+     They never pass through an intermediary and the developer cannot read them.</p>
+
+  <h2>4. Why each permission is needed</h2>
+  <table>
+    <thead><tr><th>Permission</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>activeTab</code> / <code>tabs</code></td><td>Read the current tab id so a scan result is tied to that tab</td></tr>
+      <tr><td>Host access (<code>&lt;all_urls&gt;</code>)</td><td>Images can live on any site; needed to read image URLs and page styles</td></tr>
+      <tr><td><code>scripting</code></td><td>Inject the scanner into the current page when the user clicks scan</td></tr>
+      <tr><td><code>storage</code></td><td>Save your settings and the short-lived scan cache</td></tr>
+      <tr><td><code>downloads</code></td><td>Save images you chose to download</td></tr>
+      <tr><td><code>contextMenus</code></td><td>Provide image right-click menu items</td></tr>
+      <tr><td><code>webRequest</code></td><td>Passively observe image responses (never modifies or blocks requests)</td></tr>
+      <tr><td><code>webNavigation</code></td><td>Clear the previous page's cache on navigation</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5. Third-party services</h2>
+  <p>Contacted only when you configure them and explicitly trigger them:</p>
+  <ul>
+    <li><strong>GitHub</strong> (<code>api.github.com</code>) — upload images, read repository directories.</li>
+    <li><strong>AI upscale endpoint</strong> (address entered by you) — sends the single image you chose to upscale.</li>
+  </ul>
+
+  <h2>6. Sharing and selling</h2>
+  <p>We do not sell, rent or share user data. There is no data to share — the extension collects none.</p>
+
+  <h2>7. Deleting your data</h2>
+  <ul>
+    <li>Uninstalling the extension removes all of its local storage</li>
+    <li>To clear settings only, empty the GitHub / AI fields in Settings</li>
+    <li>The scan cache expires after 30 minutes and is cleared when the browser closes</li>
+  </ul>
+
+  <h2>8. Children's privacy</h2>
+  <p>Not directed to children under 13; no age-related information is collected.</p>
+
+  <h2>9. Changes</h2>
+  <p>If a future version adds a feature requiring network access, this page and the release notes
+     will be updated. Continued use means you accept the updated policy.</p>
+
+  <h2>10. Contact</h2>
+  <p>Website: <a href="https://www.ztsite.com/">https://www.ztsite.com</a></p>
+
+  <p class="foot">本政策以中文版本为准 / The Chinese version is authoritative. Web Image Tool Pro 是免费的开源浏览器扩展，不提供付费服务。</p>
 </div>
 </body>
 </html>

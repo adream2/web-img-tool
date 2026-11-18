@@ -5,6 +5,12 @@
 
 > Edge / Chrome / 其他 Chromium 内核浏览器通用 · 免费 · 无需注册
 
+📄 **隐私政策 / Privacy Policy**：[中文](docs/privacy-policy.md) · [English](docs/privacy-policy.md#english)
+　　— 扩展商店填写的隐私政策链接指向本仓库，请以以上页面为准。
+
+🏠 **官网 / 更多工具**：[ztsite.com](https://www.ztsite.com)
+　　— 想找作者的其他作品、看更多工具，请访问官网。
+
 <!-- [![Edge Add-ons](https://img.shields.io/badge/Edge-加载项商店-667eea)](https://microsoftedge.microsoft.com/addons/detail/bajnpnkinbghodmhdgnjkeoanghfejhp) -->
 
 **上架状态**：已提交 Microsoft Edge 加载项商店，审核中（0.1.0，2026-11-18 提交）。
