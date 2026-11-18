@@ -142,8 +142,17 @@ web-img-tool/
 ├── picx.js                # 图床核心逻辑
 ├── picx-panel.js          # 图床面板逻辑
 ├── picx.css               # 图床样式
-└── icons/                 # 图标资源
+├── icons/
+│   ├── icon.svg           # 图标唯一源文件，改动只改这里
+│   └── icon{16,32,48,128}.png  # 由 scripts/build-assets.sh 生成
+├── scripts/
+│   └── build-assets.sh    # 从 SVG 生成全部 PNG（扩展图标 + 商店素材）
+├── docs/                  # 竞品分析、商店文案、隐私政策、上架清单
+└── promo/                 # 落地页与商店素材（store-logo.svg / store-tile.svg）
 ```
+
+> 图标统一以 `icons/icon.svg` 为准：改完 SVG 执行 `bash scripts/build-assets.sh`，
+> 会自动重出 4 个尺寸的图标以及商店徽标、宣传图，**不要手工改 PNG**。
 
 ## 隐私说明
 

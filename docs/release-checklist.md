@@ -49,11 +49,14 @@ unzip -l dist/web-image-tool-pro-1.2.0.zip | head -5   # 第一层应是 manifes
 
 ## 2. 素材清单
 
-| 素材 | 规格 | 必需 | 说明 |
+> 图标与商店素材统一由 `bash scripts/build-assets.sh` 从 SVG 生成，改样式只改 SVG 后重跑，
+> 不要手工替换 PNG（否则又会出现图标不一致）。
+
+| 素材 | 规格 | 必需 | 文件 |
 |---|---|---|---|
-| 扩展图标 | 128×128 PNG | ✅ | 直接用 `icons/icon128.png` |
-| 商店徽标 | 300×300 PNG | 建议 | 可用 `promo/store-logo.svg` 导出 |
-| 宣传图块 | 440×280 PNG/JPG | 建议 | 可用 `promo/store-tile.svg` 导出，出现在商店首页卡片 |
+| 扩展图标 | 16/32/48/128 PNG | ✅ | `icons/icon{16,32,48,128}.png`（源：`icons/icon.svg`） |
+| 商店徽标 | 300×300 PNG | 建议 | `promo/store-logo-300.png`（源：`promo/store-logo.svg`） |
+| 宣传图块 | 440×280 PNG | 建议 | `promo/store-tile-440x280.png`（源：`promo/store-tile.svg`） |
 | 截图 | **1280×800** 或 640×400，PNG/JPG，1–10 张 | ✅ 至少 1 张 | 建议 4 张，见下表 |
 | 大宣传图 | 1400×560 | 可选 | 仅编辑推荐位使用 |
 | 宣传视频 | YouTube 链接 | 可选 | 15–30 秒录屏转化最好 |
@@ -117,7 +120,7 @@ URL 建议固定，后续不要变（审核记录里会引用）。
 
 1. 上传到 `https://www.ztsite.com/web-image-tool`（WordPress 用「自定义 HTML」区块嵌入，或直接放静态目录）
 2. **替换 3 处商店链接占位**：搜索 `microsoftedge.microsoft.com/addons/`，换成真实详情页 URL（导航按钮、首屏 CTA、底部 CTA）
-3. **改图片路径**：页脚二维码写的是 `assets/gzh1.jpg`，按站点实际位置改成绝对地址（如 WordPress 的 `/wp-content/uploads/2025/xx/gzh1.jpg`）
+3. **上传二维码**：`promo/assets/gzh1.jpg` 与页面一起上传（相对路径 `assets/gzh1.jpg` 才能正确加载），或改成站点里已有的图片绝对地址
 4. **改隐私政策链接**：`./privacy-policy.html` 换成隐私政策的真实 URL
 5. 标题/描述已经写好（`<title>` 与 `og:*`），若站点有 SEO 插件，注意不要被覆盖
 6. 上线后在 README 和商店描述里回填这个落地页地址
