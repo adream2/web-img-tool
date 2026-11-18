@@ -79,6 +79,7 @@ function scheduleFlush(tabId) {
       scheduleFlush(tabId);
       return;
     }
+    if (!chrome.storage.session || !chrome.storage.session.set) return; // 老内核无 session storage
     const key = storageKey(tabId);
     const payload = {};
     payload[key] = Array.from(map.values());
