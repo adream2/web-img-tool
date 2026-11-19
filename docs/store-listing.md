@@ -96,6 +96,9 @@ Web Image Tool Pro — 网页图片批量下载与处理
 
 > **0.1.0 实填值与此不同**：三个 URL 都填了 GitHub 仓库（落地页尚未部署时的临时方案）。
 > 下次提交（≥ 0.1.1）换成上表的 ztsite 地址，细节见 [提交记录](store-submission.md)。
+>
+> 0.1.0 已于 2026-11-19 上架：
+> `https://microsoftedge.microsoft.com/addons/detail/web-image-tool-pro/bajnpnkinbghodmhdgnjkeoanghfejhp`
 | 定价 | 免费 |
 
 ### 本版本更新说明（v0.1.0 首发）

@@ -64,10 +64,10 @@ bash scripts/package.sh ~/Desktop      # 或直接输出到桌面
 4. 商店一览表：为 `zh-CN` 与 `en-US` 各建一份，粘 `docs/store-listing.md` 对应段落
 5. 上传徽标 / 图块 / 截图
 6. 提交审核 → 通常 **3–7 天**（更新约 1–2 天）
-7. 通过后确认商店页正常，并把状态从「审核中」改为「已上架」
+7. 通过后确认商店页正常，把状态改为「已上架」并放开 README 的安装徽标
 
-> 0.1.0 已于 2026-11-18 提交，详见 [提交记录](store-submission.md)。CRX ID 在提交时即已确定，
-> 商店详情页 URL 可提前拼出，因此 README 与落地页**无需等审核通过再改**。
+> 0.1.0：2026-11-18 提交，2026-11-19 通过（1 个工作日，无补件）。详见 [提交记录](store-submission.md)。
+> 商店地址：`https://microsoftedge.microsoft.com/addons/detail/web-image-tool-pro/bajnpnkinbghodmhdgnjkeoanghfejhp`
 
 ## 4. 隐私政策部署
 
@@ -94,7 +94,8 @@ URL 建议固定，后续不要变（审核记录里会引用）。
 
 ## 6. 发布后
 
-- [ ] 落地页与 README 回填商店链接
+- [x] README 回填商店链接（0.1.0 上线当天完成）
+- [ ] 落地页部署到 ztsite 并替换商店里的 3 个 URL（当前仍指向 GitHub 仓库）
 - [ ] 观察 7 天的安装/卸载比；卸载高优先查「权限提示吓退」与「扫描不全」
 - [ ] 收集差评关键词（尺寸筛选、下载失败、ZIP）→ 进 v1.3 待办
 - [ ] 每次发版同步更新 `docs/store-listing.md` 的「本版本更新说明」与 `manifest.json` 版本号
@@ -104,9 +105,8 @@ URL 建议固定，后续不要变（审核记录里会引用）。
 `promo/landing.html` 是自包含单页（无外部 CDN、无外链字体），直接扔到站点即可。
 
 1. 上传到 `https://www.ztsite.com/web-image-tool`（WordPress 用「自定义 HTML」区块嵌入，或直接放静态目录）
-2. **商店链接已填好**：4 处 CTA（导航、首屏、底部、页脚）都指向
-   `https://microsoftedge.microsoft.com/addons/detail/bajnpnkinbghodmhdgnjkeoanghfejhp`，
-   审核通过后才可访问，页面本身可以先上线
+2. **商店链接已填好且已生效**：4 处 CTA（导航、首屏、底部、页脚）都指向
+   `https://microsoftedge.microsoft.com/addons/detail/web-image-tool-pro/bajnpnkinbghodmhdgnjkeoanghfejhp`
 3. **上传二维码**：`promo/assets/gzh1.jpg` 与页面一起上传（相对路径 `assets/gzh1.jpg` 才能正确加载），或改成站点里已有的图片绝对地址
 4. **改隐私政策链接**：`./privacy-policy.html` 换成隐私政策的真实 URL
 5. 标题/描述已经写好（`<title>` 与 `og:*`），若站点有 SEO 插件，注意不要被覆盖

@@ -9,7 +9,8 @@
 | 扩展名称 | Web Image Tool Pro |
 | 版本 | 0.1.0 |
 | 提交时间 | 2026-11-18 |
-| 状态 | **审核中**（平台告知预计 7 个工作日内回复） |
+| 通过时间 | **2026-11-19**（1 个工作日，无补件） |
+| 状态 | **已上架** |
 | 类别 | 生产力 |
 | 可见度 | 公众 |
 | 商店语言 | 英语（美国）`en-US` |
@@ -45,15 +46,14 @@
 **切换到 ztsite 的时间点**：下一次提交（版本 ≥ 0.1.1）时一并改，同时补 `zh-CN` listing。
 Edge 每次提交都要走审核，把这些改动合并到一次提交里最省时间。
 
-### 商店详情页 URL
-
-审核通过后生效，格式为 `/addons/detail/<CRX ID>`：
+### 商店详情页 URL（已生效）
 
 ```
-https://microsoftedge.microsoft.com/addons/detail/bajnpnkinbghodmhdgnjkeoanghfejhp
+https://microsoftedge.microsoft.com/addons/detail/web-image-tool-pro/bajnpnkinbghodmhdgnjkeoanghfejhp
 ```
 
-> 审核期间该地址会 404，属正常现象。README 与落地页已按此地址填好，**通过后不需要再改代码**。
+带 slug 的完整形式，`/addons/detail/web-image-tool-pro/<CRX ID>`。纯 CRX 形式的
+`/addons/detail/bajnpnkinbghodmhdgnjkeoanghfejhp` 同样可访问，但对外统一用上面这条。
 
 ### 本地加载同一份代码
 
@@ -61,18 +61,25 @@ https://microsoftedge.microsoft.com/addons/detail/bajnpnkinbghodmhdgnjkeoanghfej
 `manifest.json` 生成**另一个** ID。若要与商店版本共用存储与调试，需在 `manifest.json` 中加
 `"key"` 字段（值为上面的公钥），否则两个 ID 的 `chrome.storage` 互不相通。
 
-## 待办（随本次审核推进）
+## 待办
 
-- [ ] 通过后：确认商店页面截图/描述渲染正常，README 去掉「审核中」标注
-- [ ] 通过后：把隐私政策部署到 `www.ztsite.com/privacy/web-image-tool-pro`、落地页部署到
-      `/web-image-tool`，在「更新提交」里替换 3 个 URL（这是引流的关键一步）
-- [ ] 通过后：在 `docs/store-listing.md` 记录实际展示的标题与简短描述（平台可能截断）
-- [ ] 下一次更新时补 **中文（简体）`zh-CN`** 语言条目——文案已在 `docs/store-listing.md` 第一节备好，
-      当前仅提交了 `en-US`，中文用户看到的仍是英文 listing
+- [x] 通过后：商店页面可正常访问，README 已去掉「审核中」标注并放开安装徽标
+- [ ] **部署 ztsite 页面并改商店 URL**（引流关键一步，见下方「商店字段填写」）
+- [ ] 部署后在「更新提交」里把 3 个 URL 换成 ztsite 地址
+- [ ] 下一次更新时补 **中文（简体）`zh-CN`** 语言条目——文案已在 `docs/store-listing.md` 第一节备好
 - [ ] 下一次更新版本号必须 **≥ 0.1.1**（Edge 拒绝同号或降级）
+- [ ] 观察首周安装量 / 卸载率与评价关键词（Edge 开发者后台有数据）
 
 ## 版本历史
 
 | 版本 | 提交日期 | 状态 | 说明 |
 |---|---|---|---|
-| 0.1.0 | 2026-11-18 | 审核中 | 首个公开版本：扫描筛选、ZIP 批量下载、本地处理、相似图合并、图床直传 |
+| 0.1.0 | 2026-11-18 提交 / 2026-11-19 上架 | **已上架** | 首个公开版本：扫描筛选、ZIP 批量下载、本地处理、相似图合并、图床直传 |
+
+## 上架后的实际表现（待补）
+
+商店页面显示的实际标题、简短描述、评分与安装量随时间变化，首次有数据后补到本表：
+
+| 日期 | 安装量 | 评分 / 评价数 | 备注 |
+|---|---|---|---|
+| 2026-11-19 | 刚上线 | — | 描述页按中文展示（listing 语言为 en-US，Edge 对中文用户做了本地化） |

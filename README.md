@@ -11,18 +11,14 @@
 🏠 **官网 / 更多工具**：[ztsite.com](https://www.ztsite.com)
 　　— 想找作者的其他作品、看更多工具，请访问官网。
 
-<!-- [![Edge Add-ons](https://img.shields.io/badge/Edge-加载项商店-667eea)](https://microsoftedge.microsoft.com/addons/detail/bajnpnkinbghodmhdgnjkeoanghfejhp) -->
+[![Edge Add-ons](https://img.shields.io/badge/Edge%20Add--ons-Install-667eea)](https://microsoftedge.microsoft.com/addons/detail/web-image-tool-pro/bajnpnkinbghodmhdgnjkeoanghfejhp)
+[![Version](https://img.shields.io/badge/version-0.1.0-brightgreen)](https://microsoftedge.microsoft.com/addons/detail/web-image-tool-pro/bajnpnkinbghodmhdgnjkeoanghfejhp)
 
-**上架状态**：已提交 Microsoft Edge 加载项商店，审核中（0.1.0，2026-11-18 提交）。
-通过后商店地址即生效，无需再改链接：
+**[→ 从 Microsoft Edge 加载项商店安装](https://microsoftedge.microsoft.com/addons/detail/web-image-tool-pro/bajnpnkinbghodmhdgnjkeoanghfejhp)**
 
-```
-https://microsoftedge.microsoft.com/addons/detail/bajnpnkinbghodmhdgnjkeoanghfejhp
-```
-
-审核期间可在 Edge 商店搜索「Web Image Tool Pro」，或按下方[手动加载](#安装方法)先用起来。
-商店标识（门店 ID `0RDCKC9HZ22R`、CRX `Bajnpnkinbghodmhdgnjkeoanghfejhp`）记录在
-[提交记录](docs/store-submission.md)。
+> 已上线：2026-11-19 审核通过。Edge 商店搜索「Web Image Tool Pro」同样可以找到。
+> 商店标识（门店 ID `0RDCKC9HZ22R`、CRX `Bajnpnkinbghodmhdgnjkeoanghfejhp`）记录在
+> [提交记录](docs/store-submission.md)。
 
 ## 文档
 
@@ -82,7 +78,12 @@ https://microsoftedge.microsoft.com/addons/detail/bajnpnkinbghodmhdgnjkeoanghfej
 
 ## 安装方法
 
-### Chrome / Edge 浏览器
+### 从商店安装（推荐）
+
+- **Edge**：[Microsoft Edge 加载项商店](https://microsoftedge.microsoft.com/addons/detail/web-image-tool-pro/bajnpnkinbghodmhdgnjkeoanghfejhp) → 点「获取」
+- **Chrome 及其他 Chromium 浏览器**：Chrome 应用商店暂未上架，请按下方本地加载
+
+### 本地加载（开发版）
 
 1. 下载或克隆本项目到本地
 2. 打开浏览器扩展管理页面：
